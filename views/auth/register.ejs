@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .role-fields { display: none; }
+        .active-fields { display: block; }
+    </style>
+</head>
+<body>
+    <div class="auth-container" style="max-width: 600px;">
+        <div class="auth-logo">🩸 BloodBank</div>
+        <div class="glass-card">
+            <h2>Create Account</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Join our blood donation network</p>
+
+            <% if (error) { %>
+                <div style="background: rgba(239, 68, 68, 0.1); color: var(--error); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.875rem;">
+                    <%= error %>
+                </div>
+            <% } %>
+
+            <form action="/auth/register" method="POST">
+                <div class="form-group">
+                    <label>Full Name / Hospital Name</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Select Role</label>
+                    <select name="role" class="form-control" id="roleSelect" onchange="toggleFields()" required>
+                        <option value="" disabled selected>Choose your role</option>
+                        <option value="donor">Donor</option>
+                        <option value="hospital">Hospital</option>
+                        <option value="doctor">Doctor</option>
+                        <option value="patient">Patient/User</option>
+                    </select>
+                </div>
+
+                <!-- Donor Fields -->
+                <div id="donorFields" class="role-fields">
+                    <div class="form-group">
+                        <label>Blood Group</label>
+                        <select name="blood_group" class="form-control">
+                            <option value="A+">A+</option><option value="A-">A-</option>
+                            <option value="B+">B+</option><option value="B-">B-</option>
+                            <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                            <option value="O+">O+</option><option value="O-">O-</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" name="dob" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Age (Min 18)</label>
+                        <input type="number" name="age" class="form-control" min="18" placeholder="Enter your age">
+                    </div>
+                    <div class="form-group">
+                        <label>Address</label>
+                        <textarea name="address" class="form-control"></textarea>
+                    </div>
+                </div>
+
+                <!-- Hospital Fields -->
+                <div id="hospitalFields" class="role-fields">
+                    <div class="form-group">
+                        <label>City</label>
+                        <input type="text" name="city" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Address</label>
+                        <textarea name="address" class="form-control"></textarea>
+                    </div>
+                </div>
+
+                <!-- Doctor Fields -->
+                <div id="doctorFields" class="role-fields">
+                    <div class="form-group">
+                        <label>Affiliated Hospital</label>
+                        <select name="hospital_id" class="form-control">
+                            <option value="" disabled selected>Select Hospital</option>
+                            <% hospitals.forEach(h => { %>
+                                <option value="<%= h.id %>"><%= h.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Specialization</label>
+                        <input type="text" name="specialization" class="form-control" placeholder="e.g. Hematologist">
+                    </div>
+                </div>
+
+                <!-- Generic Contact (All roles need it) -->
+                <div class="form-group">
+                    <label>Contact Number</label>
+                    <input type="text" name="contact" class="form-control" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Register Account</button>
+            </form>
+
+            <div style="margin-top: 1.5rem; font-size: 0.875rem; color: var(--text-muted);">
+                Already have an account? <a href="/auth/login" class="btn-link">Login Here</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleFields() {
+            const role = document.getElementById('roleSelect').value;
+            // Hide all first
+            document.querySelectorAll('.role-fields').forEach(f => f.classList.remove('active-fields'));
+            
+            // Show selected
+            if (role === 'donor') document.getElementById('donorFields').classList.add('active-fields');
+            if (role === 'hospital') document.getElementById('hospitalFields').classList.add('active-fields');
+            if (role === 'doctor') document.getElementById('doctorFields').classList.add('active-fields');
+        }
+    </script>
+</body>
+</html>

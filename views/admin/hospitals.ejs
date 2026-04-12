@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospitals Management - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="dashboard-layout">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header style="margin-bottom: 2rem;">
+            <h1>Hospitals Network</h1>
+            <p style="color: var(--text-muted);">Manage and track registered hospitals</p>
+        </header>
+
+        <section class="glass-card">
+            <h3>Registered Hospitals</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>City</th>
+                        <th>Address</th>
+                        <th>Contact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (hospitals.length === 0) { %>
+                        <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No hospitals found</td></tr>
+                    <% } else { %>
+                        <% hospitals.forEach(h => { %>
+                            <tr>
+                                <td>#<%= h.id %></td>
+                                <td style="font-weight: 600;"><%= h.name %></td>
+                                <td><%= h.city %></td>
+                                <td><%= h.address %></td>
+                                <td><%= h.contact %></td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+</html>

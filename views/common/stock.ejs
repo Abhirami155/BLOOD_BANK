@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Blood Inventory - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="dashboard-layout">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header style="margin-bottom: 2rem;">
+            <h1>Global Inventory Monitoring</h1>
+            <p style="color: var(--text-muted);">Real-time blood stock across all hospital network entities</p>
+        </header>
+
+        <section class="glass-card">
+            <h3>Complete Stock List</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Hospital</th>
+                        <th>City</th>
+                        <th>Blood Group</th>
+                        <th>Quantity (Units)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (stock.length === 0) { %>
+                        <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No stock records found</td></tr>
+                    <% } else { %>
+                        <% stock.forEach(s => { %>
+                            <tr>
+                                <td style="font-weight: 600;"><%= s.hospital_name %></td>
+                                <td><%= s.city %></td>
+                                <td><span style="color: var(--primary); font-weight: 800; font-size: 1.1rem;"><%= s.blood_group %></span></td>
+                                <td><%= s.quantity %></td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+</html>

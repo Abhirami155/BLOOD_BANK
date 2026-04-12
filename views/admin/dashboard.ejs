@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="dashboard-layout">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header style="margin-bottom: 2rem;">
+            <h1>Admin Control Center</h1>
+            <p style="color: var(--text-muted);">Overview of the blood donation network</p>
+        </header>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="glass-card stat-card">
+                <div class="stat-value"><%= stats.hospitals %></div>
+                <div class="stat-label">Hospitals</div>
+            </div>
+            <div class="glass-card stat-card">
+                <div class="stat-value"><%= stats.donors %></div>
+                <div class="stat-label">Total Donors</div>
+            </div>
+            <div class="glass-card stat-card">
+                <div class="stat-value"><%= stats.doctors %></div>
+                <div class="stat-label">Registered Doctors</div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <!-- Pending Approvals -->
+            <section class="glass-card">
+                <h3>Pending Donor Approvals</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Blood Group</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (pendingDonors.length === 0) { %>
+                            <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">No pending approvals</td></tr>
+                        <% } else { %>
+                            <% pendingDonors.forEach(donor => { %>
+                                <tr>
+                                    <td><%= donor.name %></td>
+                                    <td><span class="badge badge-pending"><%= donor.blood_group %></span></td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <form action="/admin/donor/approve/<%= donor.id %>" method="POST">
+                                                <button type="submit" class="btn btn-primary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; background: var(--success);">Approve</button>
+                                            </form>
+                                            <form action="/admin/donor/reject/<%= donor.id %>" method="POST">
+                                                <button type="submit" class="btn btn-primary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; background: var(--error);">Reject</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Global Stock -->
+            <section class="glass-card">
+                <h3>Global Blood Stock</h3>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;">
+                    <% const groups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+                       groups.forEach(group => { 
+                           const item = stock.find(s => s.blood_group === group);
+                    %>
+                        <div style="background: rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-weight: 800; color: var(--primary);"><%= group %></div>
+                            <div style="font-size: 1.25rem;"><%= item ? item.total : 0 %> <small style="font-size: 0.7rem; color: var(--text-muted);">units</small></div>
+                        </div>
+                    <% }) %>
+                </div>
+            </section>
+        </div>
+    </main>
+</body>
+</html>

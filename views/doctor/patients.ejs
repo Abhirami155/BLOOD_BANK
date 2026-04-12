@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Medical History - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="dashboard-layout">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header style="margin-bottom: 2rem;">
+            <h1>Patient Medical Lookup</h1>
+            <p style="color: var(--text-muted);">View chronic blood group and history of patients in your hospital</p>
+        </header>
+
+        <section class="glass-card">
+            <h3>Registered Patients</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Age</th>
+                        <th>Gender</th>
+                        <th>Blood Group</th>
+                        <th>Contact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (patients.length === 0) { %>
+                        <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No patient records available</td></tr>
+                    <% } else { %>
+                        <% patients.forEach(p => { %>
+                            <tr>
+                                <td>#<%= p.id %></td>
+                                <td style="font-weight: 600;"><%= p.name %></td>
+                                <td><%= p.age %></td>
+                                <td><%= p.gender %></td>
+                                <td><span style="color: var(--primary); font-weight: 800;"><%= p.blood_group %></span></td>
+                                <td><%= p.contact %></td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-logo">🩸 BloodBank</div>
+        <div class="glass-card">
+            <h2>Welcome Back</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Login to your dashboard</p>
+            
+            <% if (error) { %>
+                <div style="background: rgba(239, 68, 68, 0.1); color: var(--error); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.875rem;">
+                    <%= error %>
+                </div>
+            <% } %>
+
+            <form action="/auth/login" method="POST">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" name="email" class="form-control" placeholder="admin@bloodbank.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Sign In</button>
+            </form>
+
+            <div style="margin-top: 1.5rem; font-size: 0.875rem; color: var(--text-muted);">
+                Don't have an account? <a href="/auth/register" class="btn-link">Register Now</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

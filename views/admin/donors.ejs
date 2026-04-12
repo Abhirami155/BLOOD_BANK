@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donors Management - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="dashboard-layout">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header style="margin-bottom: 2rem;">
+            <h1>Donor Database</h1>
+            <p style="color: var(--text-muted);">Manage and track registered donors and their statuses</p>
+        </header>
+
+        <section class="glass-card">
+            <h3>Registered Donors</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Blood Group</th>
+                        <th>Last Donation</th>
+                        <th>Status</th>
+                        <th>Contact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (donors.length === 0) { %>
+                        <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No donors found</td></tr>
+                    <% } else { %>
+                        <% donors.forEach(d => { %>
+                            <tr>
+                                <td>#<%= d.id %></td>
+                                <td style="font-weight: 600;"><%= d.name %></td>
+                                <td><span class="badge badge-pending" style="background: rgba(225, 29, 72, 0.1); color: var(--primary);"><%= d.blood_group %></span></td>
+                                <td><%= d.last_donation_date ? new Date(d.last_donation_date).toLocaleDateString() : 'Never' %></td>
+                                <td><span class="badge badge-<%= d.registration_status %>"><%= d.registration_status.toUpperCase() %></span></td>
+                                <td><%= d.contact %></td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+</html>

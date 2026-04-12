@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctors Management - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="dashboard-layout">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header style="margin-bottom: 2rem;">
+            <h1>Registered Doctors</h1>
+            <p style="color: var(--text-muted);">View all specialized medical staff in the network</p>
+        </header>
+
+        <section class="glass-card">
+            <h3>Registered Doctors</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Hospital</th>
+                        <th>Specialization</th>
+                        <th>Contact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (doctors.length === 0) { %>
+                        <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No doctors found</td></tr>
+                    <% } else { %>
+                        <% doctors.forEach(d => { %>
+                            <tr>
+                                <td>#<%= d.id %></td>
+                                <td style="font-weight: 600;"><%= d.name %></td>
+                                <td><%= d.hospital_name %></td>
+                                <td><%= d.specialization %></td>
+                                <td><%= d.contact %></td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BloodBank - Connect, Donate, Save Lives</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at top right, rgba(225, 29, 72, 0.15), transparent),
+                        radial-gradient(circle at bottom left, rgba(30, 41, 59, 1), #0f172a);
+            text-align: center;
+            padding: 2rem;
+        }
+        .hero h1 { font-size: 4rem; font-weight: 900; margin-bottom: 1rem; }
+        .hero p { font-size: 1.25rem; color: var(--text-muted); max-width: 600px; margin-bottom: 3rem; }
+        .hero-btns { display: flex; gap: 1.5rem; }
+        .hero-btns .btn { width: 200px; }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div class="auth-logo" style="font-size: 4.5rem; margin-bottom: 1rem;">🩸</div>
+        <h1>BloodBank MS</h1>
+        <p>A scalable, real-time platform connecting hospitals, doctors, and donors to ensure no request goes unfulfilled.</p>
+        
+        <div class="hero-btns">
+            <a href="/auth/login" class="btn btn-primary">Get Started</a>
+            <a href="/auth/register" class="btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">Register Account</a>
+        </div>
+
+        <div style="margin-top: 5rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3rem; max-width: 900px;">
+            <div>
+                <h3 style="color: var(--primary);">Real-time Stock</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">Monitor blood availability across all registered bank branches.</p>
+            </div>
+            <div>
+                <h3 style="color: var(--primary);">Secure RBAC</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">Advanced role-based access for Admins, Doctors, and Patients.</p>
+            </div>
+            <div>
+                <h3 style="color: var(--primary);">Emergency Ready</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">Priority request system for critical medical emergencies.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

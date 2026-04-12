@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donor Dashboard - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="dashboard-layout">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <!-- Hero Section -->
+        <section class="donor-hero">
+            <div class="text-art">A HERO LIVES WITHIN YOU</div>
+            <p style="margin-top: 1rem; font-size: 1.25rem; opacity: 0.9;">Thank you for your life-saving contribution, <%= donor.name %>.</p>
+        </section>
+
+        <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 2rem;">
+            <!-- Impact & Motivation Area -->
+            <div>
+                <!-- Impact Stats Grid -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                    <div class="glass-card" style="text-align: center; padding: 2rem;">
+                        <i class="fas fa-hand-holding-heart" style="font-size: 2rem; color: var(--primary); margin-bottom: 1rem;"></i>
+                        <div style="font-size: 2.5rem; font-weight: 800;"><%= stats.totalDonations %></div>
+                        <div style="color: var(--text-muted); font-size: 0.875rem; text-transform: uppercase;">Total Donations</div>
+                    </div>
+                    <div class="glass-card" style="text-align: center; border: 1px solid var(--success); padding: 2rem;">
+                        <i class="fas fa-users" style="font-size: 2rem; color: var(--success); margin-bottom: 1rem;"></i>
+                        <div style="font-size: 2.5rem; font-weight: 800; color: var(--success);"><%= stats.livesSaved %></div>
+                        <div style="color: var(--text-muted); font-size: 0.875rem; text-transform: uppercase;">Potential Lives Saved</div>
+                    </div>
+                </div>
+
+                <!-- Motivational Quotes Art -->
+                <section class="glass-card">
+                    <h3 style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">Daily Inspiration</h3>
+                    
+                    <div class="quote-card">
+                        "Your blood is precious: and it’s meant to circulate. Share it." 
+                        <span style="display: block; font-size: 0.9rem; margin-top: 0.5rem; color: var(--text-muted); font-style: normal;">— Anonymous</span>
+                    </div>
+
+                    <div class="quote-card" style="border-left-color: var(--success);">
+                        "The gift of blood is the gift of life. There is no substitute for human blood."
+                        <span style="display: block; font-size: 0.9rem; margin-top: 0.5rem; color: var(--text-muted); font-style: normal;">— World Health Organization</span>
+                    </div>
+
+                    <div class="quote-card" style="border-left-color: #f59e0b;">
+                        "Heroes don't always wear capes, some just roll up their sleeves."
+                    </div>
+                </section>
+            </div>
+
+            <!-- Profile Overview (Side-bar info) -->
+            <div>
+                <section class="glass-card">
+                    <h3>Donor Profile</h3>
+                    <div style="margin: 1.5rem 0; line-height: 2;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Blood Group:</span>
+                            <span style="color: var(--primary); font-weight: 800;"><%= donor.blood_group %></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Last Donation:</span>
+                            <span><%= donor.last_donation_date ? new Date(donor.last_donation_date).toLocaleDateString() : 'N/A' %></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Status:</span>
+                            <span class="badge badge-<%= donor.registration_status %>"><%= donor.registration_status.toUpperCase() %></span>
+                        </div>
+                    </div>
+
+                    <hr style="opacity: 0.1; margin: 1.5rem 0;">
+
+                    <h4>Update Contact Info</h4>
+                    <form action="/donor/update" method="POST" style="margin-top: 1rem;">
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="text" name="contact" class="form-control" value="<%= donor.contact %>">
+                        </div>
+                        <div class="form-group">
+                            <label>Home Address</label>
+                            <textarea name="address" class="form-control" rows="3"><%= donor.address %></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Profile</button>
+                    </form>
+                </section>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

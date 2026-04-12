@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Donations - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="dashboard-layout">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header style="margin-bottom: 2rem;">
+            <h1>My Donation Journey</h1>
+            <p style="color: var(--text-muted);">A record of every life you've touched through your generosity.</p>
+        </header>
+
+        <section class="glass-card">
+            <h3>Complete History</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Hospital / Blood Bank</th>
+                        <th>Blood Group</th>
+                        <th>Quantity (Units)</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (history.length === 0) { %>
+                        <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No donations recorded yet. Start your journey today!</td></tr>
+                    <% } else { %>
+                        <% history.forEach(d => { %>
+                            <tr>
+                                <td style="font-weight: 600;"><%= d.hospital_name %></td>
+                                <td><span style="font-weight: 700; color: var(--primary);"><%= d.blood_group %></span></td>
+                                <td><%= d.quantity %> Units</td>
+                                <td><%= new Date(d.donation_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) %></td>
+                                <td><span class="badge badge-approved">COMPLETED</span></td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+
+        <div style="margin-top: 2rem; text-align: center; color: var(--text-muted);">
+            <p>"The blood you donate gives someone another chance at life."</p>
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="dashboard-layout">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header style="margin-bottom: 2rem;">
+            <h1>Patient Dashboard</h1>
+            <p style="color: var(--text-muted);">Search for blood groups and availability</p>
+        </header>
+
+        <!-- Search Section -->
+        <section class="glass-card" style="margin-bottom: 2.5rem;">
+            <h3>Quick Search</h3>
+            <form action="/patient/search" method="POST" style="display: flex; gap: 1rem; margin-top: 1rem; align-items: flex-end;">
+                <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <label>Blood Group</label>
+                    <select name="blood_group" class="form-control" required>
+                        <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                        <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <label>City</label>
+                    <input type="text" name="city" class="form-control" placeholder="Search City">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: auto;">Search Availability</button>
+            </form>
+
+            <% if (searchResults) { %>
+                <div style="margin-top: 2rem;">
+                    <h4>Availability Comparison</h4>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Hospital</th>
+                                <th>City</th>
+                                <th>Group</th>
+                                <th>Available (Units)</th>
+                                <th>Contact</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (searchResults.length === 0) { %>
+                                <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No hospitals found with requested blood group in this region.</td></tr>
+                            <% } else { %>
+                                <% searchResults.forEach(res => { %>
+                                    <tr>
+                                        <td><%= res.hospital_name %></td>
+                                        <td><%= res.city %></td>
+                                        <td><span style="font-weight: 700; color: var(--primary);"><%= res.blood_group %></span></td>
+                                        <td><%= res.quantity %></td>
+                                        <td><%= res.contact %></td>
+                                    </tr>
+                                <% }) %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
+        </section>
+
+        <!-- Requests History -->
+        <section id="requests" class="glass-card">
+            <h3>My Active Blood Requests</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Hospital</th>
+                        <th>Group</th>
+                        <th>Qty</th>
+                        <th>Urgency</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (requests.length === 0) { %>
+                        <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No requests raised yet</td></tr>
+                    <% } else { %>
+                        <% requests.forEach(r => { %>
+                            <tr>
+                                <td><%= r.hospital_name %></td>
+                                <td><span style="font-weight: 700; color: var(--primary);"><%= r.blood_group %></span></td>
+                                <td><%= r.quantity %></td>
+                                <td><span style="color: <%= r.urgency === 'emergency' ? 'var(--error)' : 'var(--text-muted)' %>"><%= r.urgency.toUpperCase() %></span></td>
+                                <td><span class="badge badge-<%= r.status %>"><%= r.status.toUpperCase() %></span></td>
+                                <td><%= new Date(r.created_at).toLocaleDateString() %></td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+</html>
