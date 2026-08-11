@@ -3,6 +3,7 @@ const pool = require('../config/db');
 exports.getGlobalStock = async (req, res) => {
     try {
         const [rows] = await pool.execute('SELECT bi.*, h.name as hospital_name, h.city FROM blood_inventory bi JOIN hospitals h ON bi.hospital_id = h.id WHERE bi.quantity > 0 ORDER BY h.city');
+        console.log(`[DEBUG] Global stock fetch result: ${rows.length} records ✔`);
         res.render('common/stock', { user: req.session.user, stock: rows });
     } catch (err) {
         console.error(err);

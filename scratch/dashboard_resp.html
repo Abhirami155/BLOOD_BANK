@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-logo">🩸 BloodBank</div>
+        <div class="glass-card">
+            <h2>Welcome Back</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Login to your dashboard</p>
+            
+            
+
+            <form action="/auth/login" method="POST">
+                <div class="form-group">
+                    <label>Email / Username</label>
+                    <input type="email" name="email" class="form-control" placeholder="Email or Username" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 0.5rem;">
+                    <label>Password</label>
+                    <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                </div>
+                <div style="text-align: right; margin-bottom: 1.5rem;">
+                    <a href="#" onclick="toggleHintModal(event)" class="btn-link" style="font-size: 0.8rem;">Forgot Password?</a>
+                </div>
+                <button type="submit" class="btn btn-primary">Sign In</button>
+            </form>
+
+            <div id="hintModal" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem;">Get Password Hint</h4>
+                <div class="form-group" style="margin-bottom: 0.5rem;">
+                    <input type="email" id="hintEmail" class="form-control" placeholder="Enter your Email" required>
+                </div>
+                <button type="button" onclick="fetchHint()" class="btn btn-secondary" style="width: 100%; padding: 0.5rem; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: white; border-radius: 4px; cursor: pointer;">Get Hint</button>
+                <div id="hintResult" style="margin-top: 0.5rem; font-size: 0.8rem; display: none; padding: 0.5rem; border-radius: 4px;"></div>
+            </div>
+
+            <script>
+            function toggleHintModal(e) {
+                e.preventDefault();
+                const modal = document.getElementById('hintModal');
+                modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
+            }
+
+            async function fetchHint() {
+                const email = document.getElementById('hintEmail').value;
+                const resultDiv = document.getElementById('hintResult');
+                if (!email) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                    resultDiv.style.color = 'var(--error)';
+                    resultDiv.innerText = 'Please enter an email';
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/auth/get-password-hint', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email })
+                    });
+                    const data = await response.json();
+                    
+                    resultDiv.style.display = 'block';
+                    if (data.success) {
+                        resultDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+                        resultDiv.style.color = '#10b981';
+                        resultDiv.innerHTML = `<strong>Hint:</strong> ${data.hint}`;
+                    } else {
+                        resultDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                        resultDiv.style.color = 'var(--error)';
+                        resultDiv.innerText = data.message;
+                    }
+                } catch (err) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                    resultDiv.style.color = 'var(--error)';
+                    resultDiv.innerText = 'Error fetching hint';
+                }
+            }
+            </script>
+
+            <div style="margin-top: 1.5rem; font-size: 0.875rem; color: var(--text-muted);">
+                Don't have an account? <a href="/auth/register" class="btn-link">Register Now</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

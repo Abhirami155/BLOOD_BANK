@@ -13,5 +13,12 @@ router.get('/donor', isAdmin, adminController.getDonors); // Alias
 router.get('/stock', isAdmin, adminController.getStock);
 router.post('/donor/approve/:id', isAdmin, adminController.approveDonor);
 router.post('/donor/reject/:id', isAdmin, adminController.rejectDonor);
+router.get('/patients', isAdmin, adminController.getPatients);
+router.post('/toggle-status', isAdmin, adminController.toggleStatus);
+router.post('/delete-user', isAdmin, adminController.deleteUser);
+router.post('/handle-deactivation-request', isAdmin, adminController.handleDeactivationRequest);
+router.post('/handle-reactivation-request', isAdmin, adminController.handleReactivationRequest);
+router.get('/details/:role/:targetId', isAdmin, adminController.getDetails);
+router.get('/donations', isAdmin, adminController.getDonations);
 
 module.exports = router;

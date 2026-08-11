@@ -5,6 +5,82 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Doctor Dashboard - Blood Bank MS</title>
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .stock-preview {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: none; /* Shown via JS */
+        }
+        .stock-badge {
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+        .stock-ok { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .stock-low { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .stock-none { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+        .lifecycle-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+        }
+        .lifecycle-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+        .lifecycle-step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 12px;
+            right: -50%;
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 1;
+        }
+        .step-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #333;
+            margin: 0 auto 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            z-index: 2;
+            position: relative;
+        }
+        .lifecycle-step.active .step-dot { background: var(--primary); box-shadow: 0 0 10px var(--primary); }
+        .lifecycle-step.completed .step-dot { background: var(--success); }
+        .step-txt { font-size: 0.7rem; color: var(--text-muted); }
+
+        /* Success Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            justify-content: center; align-items: center;
+        }
+        .success-card {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 16px;
+            border: 1px solid var(--success);
+            text-align: center;
+            width: 400px;
+        }
+    </style>
 </head>
 <body class="dashboard-layout">
     <%- include('../partials/sidebar') %>
@@ -19,70 +95,248 @@
             <!-- Create Request -->
             <section class="glass-card">
                 <h3>Raise New Blood Request</h3>
-                <form action="/doctor/request" method="POST" style="margin-top: 1rem;">
+                <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem; margin-bottom: 1rem;">
+                    Select an assigned patient to auto-fill clinical data.
+                </p>
+                <form action="/doctor/request" method="POST" id="bloodRequestForm" onsubmit="return validateForm()">
                     <div class="form-group">
                         <label>Select Patient</label>
-                        <select name="patient_id" class="form-control" required>
+                        <select name="patient_id" id="patientSelect" class="form-control" required onchange="onPatientSelect()">
+                            <option value="" disabled selected>Choose a patient</option>
                             <% patients.forEach(p => { %>
-                                <option value="<%= p.id %>"><%= p.name %> (<%= p.blood_group %>)</option>
+                                <option value="<%= p.id %>" data-blood-group="<%= p.blood_group %>" data-name="<%= p.name %>">
+                                    <%= p.name %> (<%= p.blood_group %>)
+                                </option>
                             <% }) %>
                         </select>
                     </div>
-                    <div class="form-row" style="display: flex; gap: 1rem;">
+
+                    <!-- Stock Preview (Dynamic) -->
+                    <div id="stockPreview" class="stock-preview">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.85rem; color: var(--text-muted);">Current Hospital Stock:</span>
+                            <span id="stockDisplay" class="stock-badge">Select Patient...</span>
+                        </div>
+                        <div id="stockWarning" style="color: var(--error); font-size: 0.75rem; margin-top: 0.5rem; display: none; font-weight: 700;">
+                            ⚠️ Currently Unavailable / Stock Shortage
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 1rem; margin-top: 1rem;">
                         <div class="form-group" style="flex: 1;">
                             <label>Blood Group</label>
-                            <select name="blood_group" class="form-control" required>
-                                <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
-                                <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
-                            </select>
+                            <input type="text" name="blood_group" id="bloodGroupDisplay" class="form-control" readonly style="background: rgba(255,255,255,0.05);">
                         </div>
                         <div class="form-group" style="flex: 1;">
                             <label>Quantity (Units)</label>
-                            <input type="number" name="quantity" class="form-control" placeholder="1" required>
+                            <input type="number" name="quantity" id="quantityInput" class="form-control" placeholder="1" min="1" required oninput="checkInventoryLimit()">
                         </div>
                     </div>
+
                     <div class="form-group">
                         <label>Urgency Level</label>
-                        <select name="urgency" class="form-control" required>
+                        <select name="urgency" id="urgencySelect" class="form-control" required>
                             <option value="normal">Normal</option>
-                            <option value="emergency">EMERGENCY 🚨</option>
+                            <option value="emergency">Emergency</option>
+                            <option value="critical">CRITICAL 🚨 (Immediate Alert)</option>
                         </select>
                     </div>
+
+                    <div class="form-group">
+                        <label>Reason for Request</label>
+                        <textarea name="reason" id="reasonInput" class="form-control" rows="3" placeholder="Enter medical reason (e.g., Emergency surgery, Severe anemia)" required></textarea>
+                    </div>
+
+                    <div id="qtyWarning" style="color: var(--error); font-size: 0.8rem; margin-bottom: 1rem; display: none; font-weight: 600;">
+                        Requested quantity exceeds available hospital inventory.
+                    </div>
+
                     <button type="submit" class="btn btn-primary">Submit Request</button>
                 </form>
             </section>
 
-            <!-- Request History -->
-            <section class="glass-card">
-                <h3>My Request History</h3>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Patient ID</th>
-                            <th>Group</th>
-                            <th>Qty</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% if (requests.length === 0) { %>
-                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No requests raised yet</td></tr>
-                        <% } else { %>
-                            <% requests.forEach(r => { %>
-                                <tr>
-                                    <td>#<%= r.patient_id %></td>
-                                    <td><span style="font-weight: 700; color: var(--primary);"><%= r.blood_group %></span></td>
-                                    <td><%= r.quantity %></td>
-                                    <td><span class="badge badge-<%= r.status %>"><%= r.status.toUpperCase() %></span></td>
-                                    <td><%= new Date(r.created_at).toLocaleDateString() %></td>
-                                </tr>
-                            <% }) %>
+            <!-- Lifecycle & History -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <!-- Request Lifecycle -->
+                <section class="glass-card">
+                    <h3>Request Lifecycle</h3>
+                    <% if (requests.length > 0) { 
+                        const latest = requests[0];
+                        const statuses = ['pending', 'approved', 'processing', 'completed'];
+                        const idx = statuses.indexOf(latest.status);
+                    %>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                            Latest: <b><%= latest.patient_name %></b> (<%= latest.blood_group %>)
+                        </div>
+                        <div class="lifecycle-container">
+                            <div class="lifecycle-step <%= idx >= 0 ? 'active' : '' %> <%= idx > 0 ? 'completed' : '' %>">
+                                <div class="step-dot"><%= idx > 0 ? '✓' : '1' %></div>
+                                <div class="step-txt">Requested</div>
+                            </div>
+                            <div class="lifecycle-step <%= idx >= 1 ? 'active' : '' %> <%= idx > 1 ? 'completed' : '' %>">
+                                <div class="step-dot"><%= idx > 1 ? '✓' : '2' %></div>
+                                <div class="step-txt">Approved</div>
+                            </div>
+                            <div class="lifecycle-step <%= idx >= 2 ? 'active' : '' %> <%= idx > 2 ? 'completed' : '' %>">
+                                <div class="step-dot"><%= idx > 2 ? '✓' : '3' %></div>
+                                <div class="step-txt">Processing</div>
+                            </div>
+                            <div class="lifecycle-step <%= idx >= 3 ? 'active' : '' %>">
+                                <div class="step-dot"><%= idx === 3 ? '✓' : '4' %></div>
+                                <div class="step-txt">Completed</div>
+                            </div>
+                        </div>
+                        <% if (latest.status === 'rejected') { %>
+                            <div style="color: var(--error); font-size: 0.8rem; text-align: center; margin-top: 1rem; font-weight: 700;">
+                                ✖ Latest request was REJECTED due to inventory unavailability.
+                            </div>
                         <% } %>
-                    </tbody>
-                </table>
-            </section>
+                    <% } else { %>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;">No active requests to track.</p>
+                    <% } %>
+                </section>
+
+                <!-- History -->
+                <section class="glass-card">
+                    <h3>My Request History</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Qty</th>
+                                <th>Reason</th>
+                                <th>Urgency</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (requests.length === 0) { %>
+                                <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No requests raised yet</td></tr>
+                            <% } else { %>
+                                <% requests.forEach(r => { %>
+                                    <tr>
+                                        <td>
+                                            <div style="font-weight: 600;"><%= r.patient_name %></div>
+                                            <div style="font-size: 0.7rem; color: var(--primary);"><%= r.blood_group %></div>
+                                        </td>
+                                        <td><%= r.quantity %></td>
+                                        <td style="font-size: 0.75rem; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<%= r.reason %>">
+                                            <%= r.reason || '—' %>
+                                        </td>
+                                        <td>
+                                            <span style="font-size: 0.7rem; font-weight: 800; color: <%= r.urgency === 'critical' ? '#ef4444' : (r.urgency === 'emergency' ? '#f59e0b' : '#94a3b8') %>">
+                                                <%= r.urgency.toUpperCase() %>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-<%= r.status %>"><%= r.status.toUpperCase() %></span>
+                                            <% if (r.stock_shortage) { %>
+                                                <div style="font-size: 0.6rem; color: var(--error); font-weight: 800;">STOCK SHORTAGE</div>
+                                            <% } %>
+                                        </td>
+                                        <td style="font-size: 0.75rem;"><%= new Date(r.created_at).toLocaleDateString() %></td>
+                                    </tr>
+                                <% }) %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </section>
+            </div>
         </div>
     </main>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal-overlay">
+        <div class="success-card">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+            <h2 style="color: #10b981;">Request Submitted</h2>
+            <p style="color: var(--text-muted); margin: 1rem 0;">The blood request has been successfully transmitted to the hospital queue.</p>
+            <div id="successDetails" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; text-align: left; font-size: 0.9rem;">
+                <!-- Filled via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data injected from backend
+        const inventory = <%- JSON.stringify(inventory) %>;
+        let currentGroup = '';
+
+        function onPatientSelect() {
+            const select = document.getElementById('patientSelect');
+            const selected = select.options[select.selectedIndex];
+            const bloodGroup = selected.getAttribute('data-blood-group');
+            currentGroup = bloodGroup;
+
+            // Auto-fill
+            document.getElementById('bloodGroupDisplay').value = bloodGroup;
+
+            // Stock Preview
+            const stockItem = inventory.find(i => i.blood_group === bloodGroup);
+            const qty = stockItem ? stockItem.quantity : 0;
+            
+            const display = document.getElementById('stockDisplay');
+            const preview = document.getElementById('stockPreview');
+            const warning = document.getElementById('stockWarning');
+
+            preview.style.display = 'block';
+            display.innerText = `${bloodGroup} → ${qty} Units Available`;
+            
+            display.className = 'stock-badge';
+            if (qty > 10) display.classList.add('stock-ok');
+            else if (qty > 0) display.classList.add('stock-low');
+            else display.classList.add('stock-none');
+
+            warning.style.display = (qty === 0) ? 'block' : 'none';
+            if (qty === 0) warning.innerText = 'Currently Unavailable';
+            
+            checkInventoryLimit();
+        }
+
+        function checkInventoryLimit() {
+            if (!currentGroup) return;
+            const qtyInput = document.getElementById('quantityInput').value;
+            const stockItem = inventory.find(i => i.blood_group === currentGroup);
+            const stockQty = stockItem ? stockItem.quantity : 0;
+            
+            const warning = document.getElementById('qtyWarning');
+            if (qtyInput > stockQty) {
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+
+        function validateForm() {
+            const patient = document.getElementById('patientSelect').value;
+            const qty = document.getElementById('quantityInput').value;
+            const reason = document.getElementById('reasonInput').value;
+
+            if (!patient) { alert('Please select a patient.'); return false; }
+            if (qty <= 0) { alert('Quantity must be greater than 0.'); return false; }
+            if (!reason.trim()) { alert('Please provide a medical reason for the request.'); return false; }
+
+            return true;
+        }
+
+        // Handle Success Modal
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('success') === 'true') {
+                const modal = document.getElementById('successModal');
+                const details = document.getElementById('successDetails');
+                
+                // We don't have the full request data in params, so we just show a generic success
+                // or fetch the last request from the table
+                modal.style.display = 'flex';
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    // Clean URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }, 3000);
+            }
+        };
+    </script>
 </body>
 </html>

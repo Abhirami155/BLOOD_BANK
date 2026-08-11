@@ -5,6 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Blood Bank MS</title>
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+        .analytics-card {
+            padding: 1.5rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+        }
+        .analytics-value { font-size: 2rem; font-weight: 800; margin-bottom: 0.25rem; }
+        .analytics-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+        .alert-panel {
+            background: rgba(239, 68, 68, 0.05);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(239, 68, 68, 0.1);
+        }
+        .alert-item:last-child { border-bottom: none; }
+        
+        .timeline { margin-top: 1rem; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 1.5rem; }
+        .timeline-item { position: relative; margin-bottom: 1.5rem; }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.95rem;
+            top: 0.25rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+        .timeline-time { font-size: 0.7rem; color: var(--text-muted); }
+        .timeline-content { font-size: 0.85rem; margin-top: 0.25rem; }
+
+        .inventory-section {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+        .inventory-section::-webkit-scrollbar { width: 4px; }
+        .inventory-section::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    </style>
 </head>
 <body class="dashboard-layout">
     <%- include('../partials/sidebar') %>
@@ -12,79 +68,361 @@
     <main class="main-content">
         <header style="margin-bottom: 2rem;">
             <h1>Admin Control Center</h1>
-            <p style="color: var(--text-muted);">Overview of the blood donation network</p>
+            <p style="color: var(--text-muted);">Network-wide monitoring & intelligence dashboard</p>
         </header>
 
-        <!-- Stats Grid -->
-        <div class="stats-grid">
-            <div class="glass-card stat-card">
-                <div class="stat-value"><%= stats.hospitals %></div>
-                <div class="stat-label">Hospitals</div>
+        <!-- Request Analytics Cards -->
+        <div class="analytics-grid">
+            <div class="analytics-card" style="border-bottom: 3px solid var(--error);">
+                <div class="analytics-value" style="color: var(--error);"><%= stats.emergencyToday %></div>
+                <div class="analytics-label">Emergency Today</div>
             </div>
-            <div class="glass-card stat-card">
-                <div class="stat-value"><%= stats.donors %></div>
-                <div class="stat-label">Total Donors</div>
+            <div class="analytics-card" style="border-bottom: 3px solid #facc15;">
+                <div class="analytics-value" style="color: #facc15;"><%= stats.rejectedCount %></div>
+                <div class="analytics-label">Rejected Requests</div>
             </div>
-            <div class="glass-card stat-card">
-                <div class="stat-value"><%= stats.doctors %></div>
-                <div class="stat-label">Registered Doctors</div>
+            <div class="analytics-card" style="border-bottom: 3px solid var(--success);">
+                <div class="analytics-value" style="color: var(--success);"><%= stats.approvedCount %></div>
+                <div class="analytics-label">Approved Requests</div>
+            </div>
+            <div class="analytics-card" style="border-bottom: 3px solid var(--primary);">
+                <div class="analytics-value" style="color: var(--primary);"><%= stats.lowStockHospitals %></div>
+                <div class="analytics-label">Low Stock Hospitals</div>
             </div>
         </div>
 
-        <!-- Two Column Layout -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-            <!-- Pending Approvals -->
-            <section class="glass-card">
-                <h3>Pending Donor Approvals</h3>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Blood Group</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% if (pendingDonors.length === 0) { %>
-                            <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">No pending approvals</td></tr>
+        <!-- Critical Alerts Panel -->
+        <section class="alert-panel">
+            <h3 style="color: var(--error); margin-bottom: 1rem;">🚨 Critical System Alerts</h3>
+            <% if (criticalRequests.length === 0 && lowStockAlerts.length === 0) { %>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">No critical alerts at this time. System operating within normal parameters.</p>
+            <% } else { %>
+                <% criticalRequests.forEach(r => { %>
+                    <div class="alert-item">
+                        <span style="font-size: 1.2rem;">🆘</span>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700;">Critical Request Pending</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">Patient <b><%= r.patient_name %></b> at <b><%= r.hospital_name %></b> needs <b><%= r.blood_group %></b> urgently.</div>
+                        </div>
+                        <span class="badge badge-emergency">CRITICAL</span>
+                    </div>
+                <% }) %>
+                <% lowStockAlerts.forEach(a => { %>
+                    <div class="alert-item">
+                        <span style="font-size: 1.2rem;">📉</span>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 700;">Low Stock Warning</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);"><b><%= a.hospital_name %></b> has only <b><%= a.quantity %> units</b> of <b><%= a.blood_group %></b> left.</div>
+                        </div>
+                        <span class="badge badge-rejected">LOW STOCK</span>
+                    </div>
+                <% }) %>
+            <% } %>
+        </section>
+
+        <!-- Main Content Area -->
+        <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 2rem;">
+            <!-- Left Column: Inventory & Activity -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <!-- Hospital Inventory Breakdown -->
+                <section class="glass-card">
+                    <h3>🏥 Hospital Inventory Breakdown</h3>
+                    <div class="inventory-section" style="margin-top: 1rem;">
+                        <% 
+                            let currentHospital = '';
+                            hospitalStock.forEach(item => {
+                                if (item.hospital_name !== currentHospital) {
+                                    currentHospital = item.hospital_name;
+                        %>
+                                    <div style="margin-top: 1.5rem; margin-bottom: 0.5rem; font-weight: 700; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.25rem;">
+                                        <%= currentHospital %>
+                                    </div>
+                        <%      } %>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; padding: 0.25rem 0;">
+                                    <span style="color: var(--text-muted);"><%= item.blood_group %></span>
+                                    <span style="font-weight: 600; color: <%= item.quantity < 5 ? 'var(--error)' : '#fff' %>;"><%= item.quantity %> Units</span>
+                                </div>
+                        <%  }) %>
+                    </div>
+                </section>
+
+                <!-- Activity Log -->
+                <section class="glass-card">
+                    <h3>📜 Activity Log</h3>
+                    <div class="timeline" style="margin-top: 1.5rem;">
+                        <% if (activityLogs.length === 0) { %>
+                            <p style="color: var(--text-muted); font-size: 0.85rem;">No recent activity found.</p>
                         <% } else { %>
-                            <% pendingDonors.forEach(donor => { %>
-                                <tr>
-                                    <td><%= donor.name %></td>
-                                    <td><span class="badge badge-pending"><%= donor.blood_group %></span></td>
-                                    <td>
-                                        <div style="display: flex; gap: 0.5rem;">
-                                            <form action="/admin/donor/approve/<%= donor.id %>" method="POST">
-                                                <button type="submit" class="btn btn-primary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; background: var(--success);">Approve</button>
-                                            </form>
-                                            <form action="/admin/donor/reject/<%= donor.id %>" method="POST">
-                                                <button type="submit" class="btn btn-primary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; background: var(--error);">Reject</button>
-                                            </form>
+                            <% activityLogs.forEach(log => { 
+                                let icon = '❓';
+                                if (log.actor_role === 'admin') icon = '👑';
+                                if (log.actor_role === 'doctor') icon = '🩺';
+                                if (log.actor_role === 'hospital') icon = '🏥';
+                                if (log.actor_role === 'donor') icon = '🩸';
+                                if (log.actor_role === 'patient') icon = '👤';
+                            %>
+                                <div class="timeline-item">
+                                    <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+                                        <div style="font-size: 1.2rem; min-width: 30px;"><%= icon %></div>
+                                        <div style="flex: 1;">
+                                            <div class="timeline-time" style="margin-bottom: 0.2rem; font-weight: 600; letter-spacing: 0.5px;">
+                                                <%= new Date(log.created_at).toLocaleDateString() %> | <%= new Date(log.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) %>
+                                            </div>
+                                            <div class="timeline-content" style="line-height: 1.4;">
+                                                <span style="color: #fff; font-weight: 700;"><%= log.actor_name || 'System' %></span> 
+                                                <span style="color: var(--text-muted);"><%= (log.description || log.action_type || '').replace(log.actor_name || '', '').trim() %></span>
+                                            </div>
                                         </div>
-                                    </td>
-                                </tr>
+                                    </div>
+                                </div>
                             <% }) %>
                         <% } %>
-                    </tbody>
-                </table>
-            </section>
+                    </div>
+                </section>
+            </div>
 
-            <!-- Global Stock -->
-            <section class="glass-card">
-                <h3>Global Blood Stock</h3>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;">
-                    <% const groups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-                       groups.forEach(group => { 
-                           const item = stock.find(s => s.blood_group === group);
-                    %>
-                        <div style="background: rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 8px; text-align: center;">
-                            <div style="font-weight: 800; color: var(--primary);"><%= group %></div>
-                            <div style="font-size: 1.25rem;"><%= item ? item.total : 0 %> <small style="font-size: 0.7rem; color: var(--text-muted);">units</small></div>
-                        </div>
-                    <% }) %>
-                </div>
-            </section>
+            <!-- Right Column: Requests & Approvals -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <!-- Deactivation Requests -->
+                <section class="glass-card">
+                    <h3>🔓 Pending Deactivation Requests</h3>
+                    <div style="margin-top: 1rem;">
+                        <% if (deactivationRequests.length === 0) { %>
+                            <p style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 1rem;">No pending requests</p>
+                        <% } else { %>
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                <% deactivationRequests.forEach(req => { %>
+                                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                            <span style="font-weight: 700; color: var(--primary);"><%= req.role.toUpperCase() %>: <%= req.name %></span>
+                                            <span style="font-size: 0.7rem; color: var(--text-muted);"><%= new Date(req.created_at).toLocaleDateString() %></span>
+                                        </div>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; font-style: italic;">
+                                            "<%= req.reason || 'No reason provided' %>"
+                                        </div>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button onclick="handleDeactivation('<%= req.id %>', 'approve')" class="btn" style="flex: 1; padding: 0.4rem; font-size: 0.75rem; background: var(--error);">Approve</button>
+                                            <button onclick="handleDeactivation('<%= req.id %>', 'reject')" class="btn" style="flex: 1; padding: 0.4rem; font-size: 0.75rem; background: var(--text-muted); border: 1px solid rgba(255,255,255,0.1);">Reject</button>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            </div>
+                        <% } %>
+                    </div>
+                </section>
+
+                <script>
+                    async function handleDeactivation(requestId, action) {
+                        if (!confirm(`Are you sure you want to ${action} this deactivation request?`)) return;
+                        try {
+                            const res = await fetch('/admin/handle-deactivation-request', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ requestId, action })
+                            });
+                            const data = await res.json();
+                            if (data.success) location.reload();
+                            else alert('Action failed');
+                        } catch (err) {
+                            alert('Error processing request');
+                        }
+                    }
+                </script>
+
+                <!-- Reactivation Requests -->
+                <section class="glass-card">
+                    <h3>🔐 Pending Reactivation Requests</h3>
+                    <div style="margin-top: 1rem;">
+                        <% if (reactivationRequests.length === 0) { %>
+                            <p style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 1rem;">No pending requests</p>
+                        <% } else { %>
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                <% reactivationRequests.forEach(req => { %>
+                                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                            <span style="font-weight: 700; color: var(--success);"><%= req.role.toUpperCase() %>: <%= req.name %></span>
+                                            <span style="font-size: 0.7rem; color: var(--text-muted);"><%= new Date(req.created_at).toLocaleDateString() %></span>
+                                        </div>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; font-style: italic;">
+                                            "<%= req.reason || 'No reason provided' %>"
+                                        </div>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button onclick="handleReactivation('<%= req.id %>', 'approve')" class="btn" style="flex: 1; padding: 0.4rem; font-size: 0.75rem; background: var(--success);">Approve</button>
+                                            <button onclick="handleReactivation('<%= req.id %>', 'reject')" class="btn" style="flex: 1; padding: 0.4rem; font-size: 0.75rem; background: var(--text-muted); border: 1px solid rgba(255,255,255,0.1);">Reject</button>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            </div>
+                        <% } %>
+                    </div>
+                </section>
+
+                <script>
+                    async function handleReactivation(requestId, action) {
+                        let reason = null;
+                        if (action === 'reject') {
+                            reason = prompt('Please enter a reason for rejecting this reactivation request (Optional):');
+                            if (reason === null) return; // Cancelled
+                        } else {
+                            if (!confirm('Are you sure you want to approve this reactivation request?')) return;
+                        }
+
+                        try {
+                            const res = await fetch('/admin/handle-reactivation-request', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ requestId, action, reason })
+                            });
+                            const data = await res.json();
+                            if (data.success) location.reload();
+                            else alert('Action failed');
+                        } catch (err) {
+                            alert('Error processing request');
+                        }
+                    }
+                </script>
+
+                <!-- Pending Donor Approvals -->
+                <section class="glass-card">
+                    <h3>⏳ Pending Donor Approvals</h3>
+                    <table class="data-table" style="margin-top: 1rem;">
+                        <thead>
+                            <tr>
+                                <th>Donor</th>
+                                <th>Group</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (pendingDonors.length === 0) { %>
+                                <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">No pending approvals</td></tr>
+                            <% } else { %>
+                                <% pendingDonors.forEach(donor => { %>
+                                    <tr>
+                                        <td><%= donor.name %></td>
+                                        <td><span class="badge badge-pending"><%= donor.blood_group %></span></td>
+                                        <td>
+                                            <div style="display: flex; gap: 0.4rem;">
+                                                <form action="/admin/donor/approve/<%= donor.id %>" method="POST">
+                                                    <button type="submit" class="btn" style="padding: 0.3rem 0.5rem; font-size: 0.7rem; background: var(--success); width: auto;">Approve</button>
+                                                </form>
+                                                <form action="/admin/donor/reject/<%= donor.id %>" method="POST">
+                                                    <button type="submit" class="btn" style="padding: 0.3rem 0.5rem; font-size: 0.7rem; background: var(--error); width: auto;">Reject</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Recent Blood Requests with Filters -->
+                <section class="glass-card">
+                    <h3>📋 Recent Blood Requests</h3>
+                    
+                    <!-- Filters -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 1rem; margin-bottom: 1.5rem;">
+                        <select id="filterHospital" class="form-control" style="font-size: 0.75rem; padding: 0.4rem;" onchange="applyFilters()">
+                            <option value="">All Hospitals</option>
+                            <% hospitalList.forEach(h => { %>
+                                <option value="<%= h.name %>"><%= h.name %></option>
+                            <% }) %>
+                        </select>
+                        <select id="filterStatus" class="form-control" style="font-size: 0.75rem; padding: 0.4rem;" onchange="applyFilters()">
+                            <option value="">All Status</option>
+                            <option value="PENDING">Pending</option>
+                            <option value="APPROVED">Approved</option>
+                            <option value="PROCESSING">Processing</option>
+                            <option value="COMPLETED">Completed</option>
+                            <option value="REJECTED">Rejected</option>
+                        </select>
+                        <select id="filterGroup" class="form-control" style="font-size: 0.75rem; padding: 0.4rem;" onchange="applyFilters()">
+                            <option value="">All Groups</option>
+                            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+                        </select>
+                        <select id="filterUrgency" class="form-control" style="font-size: 0.75rem; padding: 0.4rem;" onchange="applyFilters()">
+                            <option value="">All Urgency</option>
+                            <option value="NORMAL">Normal</option>
+                            <option value="EMERGENCY">Emergency</option>
+                            <option value="CRITICAL">Critical</option>
+                        </select>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" id="requestTable">
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Hospital</th>
+                                    <th>Details</th>
+                                    <th>Urgency</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (recentRequests.length === 0) { %>
+                                    <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No requests yet</td></tr>
+                                <% } else { %>
+                                    <% recentRequests.forEach(r => { %>
+                                        <tr class="request-row" 
+                                            data-hospital="<%= r.hospital_name %>" 
+                                            data-status="<%= r.status.toUpperCase() %>" 
+                                            data-group="<%= r.blood_group %>"
+                                            data-urgency="<%= r.urgency.toUpperCase() %>">
+                                            <td>
+                                                <div style="font-weight: 600;"><%= r.patient_name || 'N/A' %></div>
+                                                <div style="font-size: 0.7rem; color: var(--text-muted);">Dr. <%= r.doctor_name || 'N/A' %></div>
+                                            </td>
+                                            <td style="font-size: 0.85rem;"><%= r.hospital_name %></td>
+                                            <td>
+                                                <div style="font-weight: 700; color: var(--primary);"><%= r.blood_group %></div>
+                                                <div style="font-size: 0.75rem;"><%= r.quantity %> Units</div>
+                                            </td>
+                                            <td>
+                                                <span style="font-size: 0.75rem; font-weight: 700; color: <%= r.urgency === 'critical' || r.urgency === 'emergency' ? 'var(--error)' : 'var(--text-muted)' %>">
+                                                    <%= r.urgency.toUpperCase() %>
+                                                </span>
+                                            </td>
+                                            <td><span class="badge badge-<%= r.status %>"><%= r.status.toUpperCase() %></span></td>
+                                        </tr>
+                                    <% }) %>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
         </div>
     </main>
+
+    <script>
+        function applyFilters() {
+            const h = document.getElementById('filterHospital').value.toUpperCase();
+            const s = document.getElementById('filterStatus').value.toUpperCase();
+            const g = document.getElementById('filterGroup').value.toUpperCase();
+            const u = document.getElementById('filterUrgency').value.toUpperCase();
+
+            document.querySelectorAll('.request-row').forEach(row => {
+                const rowH = row.getAttribute('data-hospital').toUpperCase();
+                const rowS = row.getAttribute('data-status').toUpperCase();
+                const rowG = row.getAttribute('data-group').toUpperCase();
+                const rowU = row.getAttribute('data-urgency').toUpperCase();
+
+                const matchH = !h || rowH.includes(h);
+                const matchS = !s || rowS === s;
+                const matchG = !g || rowG === g;
+                const matchU = !u || rowU === u;
+
+                if (matchH && matchS && matchG && matchU) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+    </script>
 </body>
 </html>

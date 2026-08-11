@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donation History - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="dashboard-layout">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header style="margin-bottom: 2rem;">
+            <h1>Network Donation History</h1>
+            <p style="color: var(--text-muted);">Real-time audit of all blood donations across the hospital network</p>
+        </header>
+
+        <section class="glass-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3>Historical Donation Logs</h3>
+                <div style="font-size: 0.8rem; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 0.4rem 0.8rem; border-radius: 6px;">
+                    Total Records: <%= donations.length %>
+                </div>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Donor Name</th>
+                        <th>Hospital</th>
+                        <th>Blood Group</th>
+                        <th>Units</th>
+                        <th>Donation Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (donations.length === 0) { %>
+                        <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No donations recorded in the network</td></tr>
+                    <% } else { %>
+                        <% donations.forEach(d => { %>
+                            <tr>
+                                <td style="font-weight: 600;"><%= d.donor_name %></td>
+                                <td><%= d.hospital_name %></td>
+                                <td><span style="color: var(--primary); font-weight: 800; font-size: 1.1rem;"><%= d.blood_group %></span></td>
+                                <td style="font-weight: 700;"><%= d.quantity %> Units</td>
+                                <td><%= new Date(d.donation_date).toLocaleDateString() %></td>
+                                <td>
+                                    <span class="badge badge-<%= d.status === 'completed' ? 'active' : 'pending' %>">
+                                        <%= d.status.toUpperCase() %>
+                                    </span>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+</html>

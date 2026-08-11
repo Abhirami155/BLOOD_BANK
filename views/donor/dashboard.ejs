@@ -11,6 +11,109 @@
     <%- include('../partials/sidebar') %>
 
     <main class="main-content">
+        <% if (donor.user_status === 'inactive') { %>
+            <!-- Inactive State -->
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
+                <div class="glass-card" style="text-align: center; max-width: 500px; padding: 3rem;">
+                    <h2 style="color: var(--error); margin-bottom: 1rem;">Account Temporarily Deactivated</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 2rem;">Your account has been deactivated by an administrator. You can request reactivation to restore your access.</p>
+                    
+                    <button onclick="showReactivateModal()" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem; background: var(--success); padding: 0.8rem; font-size: 1rem; border-radius: 8px;">✅ Request Reactivation</button>
+                    <a href="/auth/logout" class="btn btn-secondary" style="display: block; width: 100%; text-decoration: none; padding: 0.8rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white;">🚪 Logout</a>
+                </div>
+            </div>
+
+            <!-- Reactivation Modal & Script -->
+            <div id="reactivateModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+                <div class="glass-card" style="max-width: 400px; padding: 2rem; text-align: center;">
+                    <h3 style="color: var(--success); margin-bottom: 1rem;">Request Account Reactivation</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">Send a reactivation request to the administrator?</p>
+                    <div class="form-group" style="text-align: left;">
+                        <label style="font-size: 0.8rem; margin-bottom: 0.5rem; display: block;">Reason (Optional)</label>
+                        <textarea id="reactivateReason" class="form-control" rows="3" placeholder="Enter reason for reactivation request..." style="background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); width: 100%; border-radius: 6px; padding: 0.5rem;"></textarea>
+                    </div>
+                    <div id="reactivateMessage" style="display: none; padding: 0.5rem; border-radius: 4px; margin: 1rem 0; font-size: 0.8rem;"></div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button onclick="hideReactivateModal()" class="btn btn-secondary" style="flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.2);">Cancel</button>
+                        <button id="submitReactivateBtn" onclick="submitReactivationRequest()" class="btn" style="flex: 1; background: var(--success); color: white;">Submit Request</button>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+            function showReactivateModal() { document.getElementById('reactivateModal').style.display = 'flex'; document.getElementById('reactivateMessage').style.display = 'none'; }
+            function hideReactivateModal() { document.getElementById('reactivateModal').style.display = 'none'; }
+            async function submitReactivationRequest() {
+                const btn = document.getElementById('submitReactivateBtn');
+                const msg = document.getElementById('reactivateMessage');
+                const reason = document.getElementById('reactivateReason').value;
+                btn.disabled = true; btn.innerHTML = 'Sending...';
+                try {
+                    const response = await fetch('/api/user/request-reactivation', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: '<%= user.id %>', role: '<%= user.role %>', reason })
+                    });
+                    const data = await response.json();
+                    msg.style.display = 'block';
+                    if (data.success) {
+                        msg.style.background = 'rgba(16, 185, 129, 0.1)'; msg.style.color = '#10b981';
+                        msg.innerText = 'Reactivation request sent successfully';
+                        setTimeout(() => location.reload(), 2500);
+                    } else {
+                        msg.style.background = 'rgba(239, 68, 68, 0.1)'; msg.style.color = 'var(--error)';
+                        msg.innerText = data.message || 'Failed to send request';
+                        btn.disabled = false; btn.innerHTML = 'Submit Request';
+                    }
+                } catch (err) {
+                    msg.style.display = 'block'; msg.style.background = 'rgba(239, 68, 68, 0.1)'; msg.style.color = 'var(--error)';
+                    msg.innerText = 'An error occurred.';
+                    btn.disabled = false; btn.innerHTML = 'Submit Request';
+                }
+            }
+            </script>
+            
+        <% } else if (donor.registration_status === 'pending') { %>
+            <!-- Pending State -->
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
+                <div class="glass-card" style="text-align: center; max-width: 500px; padding: 3rem;">
+                    <h2 style="color: var(--primary); margin-bottom: 1rem;">Registration Under Review</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 1rem;">Thank you for registering as a donor.</p>
+                    <p style="color: var(--text-muted); margin-bottom: 1rem;">Your account is currently awaiting administrator approval.</p>
+                    <p style="color: var(--text-muted); margin-bottom: 2rem;">You will gain full access once your registration is verified.</p>
+                    
+                    <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 1rem; border-radius: 8px; margin-bottom: 2rem; color: #f59e0b; font-weight: bold;">
+                        Status: 🟡 Pending Approval
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem;">
+                        <button onclick="location.reload()" class="btn btn-primary" style="flex: 1;">🔄 Refresh Status</button>
+                        <a href="/auth/logout" class="btn btn-secondary" style="flex: 1; text-decoration: none; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2);">🚪 Logout</a>
+                    </div>
+                </div>
+            </div>
+
+        <% } else if (donor.registration_status === 'rejected') { %>
+            <!-- Rejected State -->
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
+                <div class="glass-card" style="text-align: center; max-width: 500px; padding: 3rem;">
+                    <h2 style="color: var(--error); margin-bottom: 1rem;">Registration Rejected</h2>
+                    
+                    <% if (donor.rejection_reason) { %>
+                        <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); padding: 1rem; border-radius: 8px; margin-bottom: 2rem; text-align: left;">
+                            <strong style="color: var(--error);">Reason for Rejection:</strong>
+                            <p style="color: var(--text-muted); margin-top: 0.5rem; font-size: 0.9rem;"><%= donor.rejection_reason %></p>
+                        </div>
+                    <% } %>
+
+                    <div style="display: flex; gap: 1rem;">
+                        <a href="/auth/register" class="btn btn-primary" style="flex: 2; text-decoration: none; display: flex; align-items: center; justify-content: center;">🔄 Submit New Registration</a>
+                        <a href="/auth/logout" class="btn btn-secondary" style="flex: 1; text-decoration: none; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2);">🚪 Logout</a>
+                    </div>
+                </div>
+            </div>
+            
+        <% } else { %>
+            <!-- Full Active Dashboard -->
         <!-- Hero Section -->
         <section class="donor-hero">
             <div class="text-art">A HERO LIVES WITHIN YOU</div>
@@ -71,6 +174,14 @@
                             <span style="color: var(--text-muted);">Status:</span>
                             <span class="badge badge-<%= donor.registration_status %>"><%= donor.registration_status.toUpperCase() %></span>
                         </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+                            <span style="color: var(--text-muted);">Eligibility:</span>
+                            <% if (isEligible) { %>
+                                <span style="color: var(--success); font-weight: 700;">✓ Eligible to Donate</span>
+                            <% } else { %>
+                                <span style="color: var(--error); font-weight: 700;">⏳ <%= daysUntilEligible %> days remaining</span>
+                            <% } %>
+                        </div>
                     </div>
 
                     <hr style="opacity: 0.1; margin: 1.5rem 0;">
@@ -89,7 +200,7 @@
                     </form>
                 </section>
             </div>
-        </div>
+        <% } %>
     </main>
 </body>
 </html>

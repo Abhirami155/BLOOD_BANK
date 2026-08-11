@@ -22,4 +22,11 @@ const pool = mysql.createPool({
     }
 })();
 
+async function setIsolationLevel(connection, level) {
+    const validLevels = ['READ UNCOMMITTED', 'READ COMMITTED', 'REPEATABLE READ', 'SERIALIZABLE'];
+    if (!validLevels.includes(level)) throw new Error('Invalid isolation level');
+    await connection.query(`SET TRANSACTION ISOLATION LEVEL ${level}`);
+}
+
+pool.setIsolationLevel = setIsolationLevel;
 module.exports = pool;

@@ -10,30 +10,187 @@
     <div class="auth-container">
         <div class="auth-logo">🩸 BloodBank</div>
         <div class="glass-card">
-            <h2>Welcome Back</h2>
-            <p style="color: var(--text-muted); margin-bottom: 2rem;">Login to your dashboard</p>
-            
-            <% if (error) { %>
-                <div style="background: rgba(239, 68, 68, 0.1); color: var(--error); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.875rem;">
-                    <%= error %>
+            <% if (typeof inactiveUser !== 'undefined' && inactiveUser) { %>
+                <!-- Dedicated Inactive Panel -->
+                <div style="text-align: center;">
+                    <% if (typeof reactivationRequest !== 'undefined' && reactivationRequest && reactivationRequest.status === 'rejected') { %>
+                        <h2 style="color: var(--error); margin-bottom: 0.5rem;">Reactivation Request Rejected</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 1rem;">Your previous reactivation request was rejected by the administrator.</p>
+                        <% if (reactivationRequest.rejection_reason) { %>
+                            <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: left; font-size: 0.85rem;">
+                                <strong style="color: var(--error);">Reason:</strong> <span style="color: var(--text-muted);"><%= reactivationRequest.rejection_reason %></span>
+                            </div>
+                        <% } %>
+                        <button onclick="showReactivateModal()" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem; background: var(--success); font-size: 1rem; padding: 0.8rem; border-radius: 8px;">🔄 Submit New Request</button>
+                        <a href="/auth/login" class="btn btn-secondary" style="display: block; width: 100%; text-decoration: none; padding: 0.8rem; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; background: transparent;">⬅ Back to Login</a>
+                    
+                    <% } else if (typeof reactivationRequest !== 'undefined' && reactivationRequest && reactivationRequest.status === 'pending') { %>
+                        <h2 style="color: var(--primary); margin-bottom: 0.5rem;">Request Under Review</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 2rem;">Your reactivation request is currently pending administrator approval.</p>
+                        <a href="/auth/login" class="btn btn-secondary" style="display: block; width: 100%; text-decoration: none; padding: 0.8rem; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; background: transparent;">⬅ Back to Login</a>
+                    
+                    <% } else { %>
+                        <h2 style="color: var(--error); margin-bottom: 0.5rem;">Account Temporarily Deactivated</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 2rem;">Your account is currently inactive.<br>You can request reactivation from the administrator.</p>
+                        <button onclick="showReactivateModal()" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem; background: var(--success); font-size: 1rem; padding: 0.8rem; border-radius: 8px;">✅ Request Reactivation</button>
+                        <a href="/auth/login" class="btn btn-secondary" style="display: block; width: 100%; text-decoration: none; padding: 0.8rem; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; background: transparent;">⬅ Back to Login</a>
+                    <% } %>
                 </div>
-            <% } %>
+
+                <!-- Reactivation Modal -->
+                <div id="reactivateModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+                    <div class="glass-card" style="max-width: 400px; padding: 2rem; text-align: center;">
+                        <h3 style="color: var(--success); margin-bottom: 1rem;">Request Account Reactivation</h3>
+                        <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">Send a reactivation request to the administrator?</p>
+                        <div class="form-group" style="text-align: left;">
+                            <label style="font-size: 0.8rem; margin-bottom: 0.5rem; display: block;">Reason (Optional)</label>
+                            <textarea id="reactivateReason" class="form-control" rows="3" placeholder="Enter reason for reactivation request..." style="background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); width: 100%; border-radius: 6px; padding: 0.5rem;"></textarea>
+                        </div>
+                        <div id="reactivateMessage" style="display: none; padding: 0.5rem; border-radius: 4px; margin: 1rem 0; font-size: 0.8rem;"></div>
+                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                            <button onclick="hideReactivateModal()" class="btn btn-secondary" style="flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.2);">Cancel</button>
+                            <button id="submitReactivateBtn" onclick="submitReactivationRequest()" class="btn" style="flex: 1; background: var(--success); color: white;">Submit Request</button>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                function showReactivateModal() {
+                    document.getElementById('reactivateModal').style.display = 'flex';
+                    document.getElementById('reactivateMessage').style.display = 'none';
+                }
+                function hideReactivateModal() {
+                    document.getElementById('reactivateModal').style.display = 'none';
+                }
+                async function submitReactivationRequest() {
+                    const btn = document.getElementById('submitReactivateBtn');
+                    const msg = document.getElementById('reactivateMessage');
+                    const reason = document.getElementById('reactivateReason').value;
+                    const userId = '<%= locals.inactiveUser ? inactiveUser.id : "" %>';
+                    const role = '<%= locals.inactiveUser ? inactiveUser.role : "" %>';
+
+                    btn.disabled = true;
+                    btn.innerHTML = 'Sending...';
+
+                    try {
+                        const response = await fetch('/api/user/request-reactivation', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId, role, reason })
+                        });
+                        const data = await response.json();
+                        msg.style.display = 'block';
+                        if (data.success) {
+                            msg.style.background = 'rgba(16, 185, 129, 0.1)';
+                            msg.style.color = '#10b981';
+                            msg.innerText = 'Reactivation request sent successfully';
+                            setTimeout(() => location.reload(), 2500);
+                        } else {
+                            msg.style.background = 'rgba(239, 68, 68, 0.1)';
+                            msg.style.color = 'var(--error)';
+                            msg.innerText = data.message || 'Failed to send request';
+                            btn.disabled = false;
+                            btn.innerHTML = 'Submit Request';
+                        }
+                    } catch (err) {
+                        msg.style.display = 'block';
+                        msg.style.background = 'rgba(239, 68, 68, 0.1)';
+                        msg.style.color = 'var(--error)';
+                        msg.innerText = 'An error occurred. Please try again.';
+                        btn.disabled = false;
+                        btn.innerHTML = 'Submit Request';
+                    }
+                }
+                </script>
+            <% } else { %>
+                <!-- Normal Login Flow -->
+                <h2>Welcome Back</h2>
+                <p style="color: var(--text-muted); margin-bottom: 2rem;">Login to your dashboard</p>
+                
+                <% if (typeof error !== 'undefined' && error) { %>
+                    <div style="background: rgba(239, 68, 68, 0.1); color: var(--error); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.875rem;">
+                        <%= error %>
+                        <% if (typeof hint !== 'undefined' && hint) { %>
+                            <div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">
+                                <%= hint %>
+                            </div>
+                        <% } %>
+                    </div>
+                <% } %>
 
             <form action="/auth/login" method="POST">
                 <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" name="email" class="form-control" placeholder="admin@bloodbank.com" required>
+                    <label>Email / Username</label>
+                    <input type="email" name="email" class="form-control" placeholder="Email or Username" required>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 0.5rem;">
                     <label>Password</label>
                     <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                </div>
+                <div style="text-align: right; margin-bottom: 1.5rem;">
+                    <a href="#" onclick="toggleHintModal(event)" class="btn-link" style="font-size: 0.8rem;">Forgot Password?</a>
                 </div>
                 <button type="submit" class="btn btn-primary">Sign In</button>
             </form>
 
+            <div id="hintModal" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem;">Get Password Hint</h4>
+                <div class="form-group" style="margin-bottom: 0.5rem;">
+                    <input type="email" id="hintEmail" class="form-control" placeholder="Enter your Email" required>
+                </div>
+                <button type="button" onclick="fetchHint()" class="btn btn-secondary" style="width: 100%; padding: 0.5rem; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: white; border-radius: 4px; cursor: pointer;">Get Hint</button>
+                <div id="hintResult" style="margin-top: 0.5rem; font-size: 0.8rem; display: none; padding: 0.5rem; border-radius: 4px;"></div>
+            </div>
+
+            <script>
+            function toggleHintModal(e) {
+                e.preventDefault();
+                const modal = document.getElementById('hintModal');
+                modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
+            }
+
+            async function fetchHint() {
+                const email = document.getElementById('hintEmail').value;
+                const resultDiv = document.getElementById('hintResult');
+                if (!email) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                    resultDiv.style.color = 'var(--error)';
+                    resultDiv.innerText = 'Please enter an email';
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/auth/get-password-hint', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email })
+                    });
+                    const data = await response.json();
+                    
+                    resultDiv.style.display = 'block';
+                    if (data.success) {
+                        resultDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+                        resultDiv.style.color = '#10b981';
+                        resultDiv.innerHTML = `<strong>Hint:</strong> ${data.hint}`;
+                    } else {
+                        resultDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                        resultDiv.style.color = 'var(--error)';
+                        resultDiv.innerText = data.message;
+                    }
+                } catch (err) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                    resultDiv.style.color = 'var(--error)';
+                    resultDiv.innerText = 'Error fetching hint';
+                }
+            }
+            </script>
+
             <div style="margin-top: 1.5rem; font-size: 0.875rem; color: var(--text-muted);">
                 Don't have an account? <a href="/auth/register" class="btn-link">Register Now</a>
             </div>
+            <% } %> <!-- End of conditional layout -->
         </div>
     </div>
 </body>

@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hospital Dashboard - Blood Bank MS</title>
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .row-critical {
+            background: rgba(239, 68, 68, 0.1) !important;
+            border-left: 4px solid #ef4444 !important;
+        }
+        .critical-pulse {
+            animation: pulse 1.5s infinite;
+            color: #ef4444;
+            font-weight: 900;
+            font-size: 0.75rem;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+    </style>
 </head>
 <body class="dashboard-layout">
     <%- include('../partials/sidebar') %>
@@ -12,7 +29,7 @@
     <main class="main-content">
         <header style="margin-bottom: 2rem;">
             <h1>Hospital Dashboard: <%= hospital.name %></h1>
-            <p style="color: var(--text-muted);">Manage your blood inventory and patient requests</p>
+            <p style="color: var(--text-muted);">Manage blood inventory and process prioritized doctor requests</p>
         </header>
 
         <!-- Inventory Summary -->
@@ -31,49 +48,81 @@
             </div>
         </section>
 
-        <!-- Requests and Donations -->
-        <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 2rem;">
-            <!-- Requests -->
-            <div id="requests" class="glass-card">
-                <h3>Active Blood Requests</h3>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Group</th>
-                            <th>Qty</th>
-                            <th>Urgency</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% if (pendingRequests.length === 0) { %>
-                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No pending requests</td></tr>
-                        <% } else { %>
-                            <% pendingRequests.forEach(req => { %>
-                                <tr>
-                                    <td><span style="font-weight: 700; color: var(--primary);"><%= req.blood_group %></span></td>
-                                    <td><%= req.quantity %></td>
-                                    <td><span class="urgency-label" style="color: <%= req.urgency === 'emergency' ? 'var(--error)' : 'var(--text-muted)' %>"><%= req.urgency.toUpperCase() %></span></td>
-                                    <td><span class="badge badge-pending"><%= req.status %></span></td>
-                                    <td>
-                                        <div style="display: flex; gap: 0.5rem;">
-                                            <form action="/hospital/request/<%= req.id %>/approved" method="POST">
-                                                <button type="submit" class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.7rem; background: var(--success); width: auto;">Approve</button>
-                                            </form>
-                                            <form action="/hospital/request/<%= req.id %>/completed" method="POST">
-                                                <button type="submit" class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.7rem; background: var(--primary); width: auto;">Fulfill</button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <% }) %>
-                        <% } %>
-                    </tbody>
-                </table>
+        <!-- Incoming Doctor Requests -->
+        <section id="requests" class="glass-card" style="margin-bottom: 2.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3>Incoming Medical Requests</h3>
+                <div style="font-size: 0.8rem; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 0.4rem 0.8rem; border-radius: 6px;">
+                    Prioritizing Critical Alerts 🚨
+                </div>
             </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Doctor</th>
+                        <th>Patient</th>
+                        <th>Details</th>
+                        <th>Medical Reason</th>
+                        <th>Urgency</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (activeRequests.length === 0) { %>
+                        <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No active requests in queue</td></tr>
+                    <% } else { %>
+                        <% activeRequests.forEach(req => { %>
+                            <tr class="<%= req.urgency === 'critical' ? 'row-critical' : '' %>">
+                                <td>Dr. <%= req.doctor_name || 'N/A' %></td>
+                                <td style="font-weight: 600;"><%= req.patient_name || 'N/A' %></td>
+                                <td>
+                                    <div style="font-weight: 700; color: var(--primary);"><%= req.blood_group %></div>
+                                    <div style="font-size: 0.75rem;"><%= req.quantity %> Units</div>
+                                    <% if (req.stock_shortage) { %>
+                                        <div style="font-size: 0.65rem; color: var(--error); font-weight: 800; margin-top: 2px;">⚠️ STOCK SHORTAGE</div>
+                                    <% } %>
+                                </td>
+                                <td style="font-size: 0.75rem; max-width: 180px; font-style: italic;">
+                                    "<%= req.reason || 'No reason provided' %>"
+                                </td>
+                                <td>
+                                    <% if (req.urgency === 'critical') { %>
+                                        <div class="critical-pulse">🚨 CRITICAL</div>
+                                    <% } else { %>
+                                        <span style="color: <%= req.urgency === 'emergency' ? 'var(--error)' : 'var(--text-muted)' %>"><%= req.urgency.toUpperCase() %></span>
+                                    <% } %>
+                                </td>
+                                <td><span class="badge badge-<%= req.status %>"><%= req.status.toUpperCase() %></span></td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <% if (req.status === 'pending') { %>
+                                            <form action="/hospital/request/<%= req.id %>/approved" method="POST">
+                                                <button type="submit" class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.7rem; background: var(--success); width: auto;">✓ Approve</button>
+                                            </form>
+                                            <form action="/hospital/request/<%= req.id %>/rejected" method="POST">
+                                                <button type="submit" class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.7rem; background: var(--error); width: auto;">✗ Reject</button>
+                                            </form>
+                                        <% } else if (req.status === 'approved') { %>
+                                            <form action="/hospital/request/<%= req.id %>/processing" method="POST">
+                                                <button type="submit" class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.7rem; background: #3b82f6; width: auto;">⚙ Start Processing</button>
+                                            </form>
+                                        <% } else if (req.status === 'processing') { %>
+                                            <form action="/hospital/request/<%= req.id %>/completed" method="POST">
+                                                <button type="submit" class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.7rem; background: var(--primary); width: auto;">🩸 Mark Completed</button>
+                                            </form>
+                                        <% } %>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
 
-            <!-- Add Donation / Stock -->
+        <!-- Add Donation / Stock -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
             <div class="glass-card">
                 <h3>Record New Donation</h3>
                 <form action="/hospital/donation" method="POST" style="margin-top: 1rem;">
@@ -91,7 +140,7 @@
                         </div>
                         <div class="form-group" style="flex: 1;">
                             <label>Units</label>
-                            <input type="number" name="quantity" class="form-control" placeholder="1" required>
+                            <input type="number" name="quantity" class="form-control" placeholder="1" min="1" required>
                         </div>
                     </div>
                     <div class="form-group">
@@ -101,7 +150,50 @@
                     <button type="submit" class="btn btn-primary">Complete Donation</button>
                 </form>
             </div>
+
+            <div class="glass-card">
+                <h3>Update Blood Stock</h3>
+                <form action="/hospital/inventory" method="POST" style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label>Blood Group</label>
+                        <select name="blood_group" class="form-control" required>
+                            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Set Quantity (Units)</label>
+                        <input type="number" name="quantity" class="form-control" placeholder="0" min="0" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Inventory</button>
+                </form>
+            </div>
         </div>
     </main>
+    <script>
+        // Check for pre-fill parameters from Donor Search
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const prefillDonorId = urlParams.get('prefill_donor_id');
+            const prefillGroup = urlParams.get('prefill_group');
+
+            if (prefillDonorId) {
+                const idInput = document.querySelector('input[name="donor_id"]');
+                const groupSelect = document.querySelector('select[name="blood_group"]');
+                
+                if (idInput) {
+                    idInput.value = prefillDonorId;
+                    // Add a highlight effect
+                    idInput.style.border = '2px solid var(--primary)';
+                    idInput.scrollIntoView({ behavior: 'smooth' });
+                }
+                
+                if (groupSelect && prefillGroup) {
+                    groupSelect.value = prefillGroup;
+                    groupSelect.style.border = '2px solid var(--primary)';
+                }
+            }
+        };
+    </script>
 </body>
 </html>

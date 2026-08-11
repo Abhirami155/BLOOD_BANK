@@ -18,6 +18,7 @@ CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
+    password_hint VARCHAR(255) DEFAULT NULL,
     role ENUM('admin', 'hospital', 'doctor', 'donor', 'patient') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -82,6 +83,7 @@ CREATE TABLE blood_inventory (
     hospital_id INT NOT NULL,
     blood_group ENUM('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-') NOT NULL,
     quantity INT DEFAULT 0 COMMENT 'In units/ml',
+    version INT DEFAULT 1,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (hospital_id) REFERENCES hospitals(id) ON DELETE CASCADE,
     CONSTRAINT chk_inventory_qty CHECK (quantity >= 0),
@@ -132,9 +134,34 @@ DELIMITER //
 
 CREATE TRIGGER after_user_insert AFTER INSERT ON users FOR EACH ROW BEGIN INSERT INTO audit_logs (action_type, table_name, record_id, details) VALUES ('INSERT', 'users', NEW.id, CONCAT('New user registered with role: ', NEW.role)); END //
 
-CREATE TRIGGER after_donation_update AFTER UPDATE ON donations FOR EACH ROW BEGIN IF NEW.status = 'completed' AND OLD.status != 'completed' THEN UPDATE donors SET last_donation_date = NEW.donation_date WHERE id = NEW.donor_id; INSERT INTO blood_inventory (hospital_id, blood_group, quantity) VALUES (NEW.hospital_id, NEW.blood_group, NEW.quantity) ON DUPLICATE KEY UPDATE quantity = quantity + NEW.quantity; END IF; END //
+CREATE TRIGGER after_user_delete AFTER DELETE ON users FOR EACH ROW BEGIN INSERT INTO audit_logs (action_type, table_name, record_id, details) VALUES ('DELETE', 'users', OLD.id, CONCAT('User account deleted with role: ', OLD.role)); END //
 
-CREATE TRIGGER after_request_update AFTER UPDATE ON requests FOR EACH ROW BEGIN IF NEW.status = 'completed' AND OLD.status != 'completed' THEN UPDATE blood_inventory SET quantity = quantity - NEW.quantity WHERE hospital_id = NEW.hospital_id AND blood_group = NEW.blood_group; END IF; END //
+-- Audit Triggers for Profiles
+CREATE TRIGGER after_hospital_update AFTER UPDATE ON hospitals FOR EACH ROW BEGIN INSERT INTO audit_logs (action_type, table_name, record_id, details) VALUES ('UPDATE', 'hospitals', NEW.id, CONCAT('Hospital data updated for: ', NEW.name)); END //
+
+CREATE TRIGGER after_donor_update AFTER UPDATE ON donors FOR EACH ROW BEGIN INSERT INTO audit_logs (action_type, table_name, record_id, details) VALUES ('UPDATE', 'donors', NEW.id, CONCAT('Donor data updated for: ', NEW.name)); END //
+
+-- Audit Triggers for Operational Data
+CREATE TRIGGER after_inventory_update AFTER UPDATE ON blood_inventory FOR EACH ROW BEGIN INSERT INTO audit_logs (action_type, table_name, record_id, details) VALUES ('UPDATE', 'blood_inventory', NEW.id, CONCAT('Inventory changed for ', NEW.blood_group, ': ', OLD.quantity, ' -> ', NEW.quantity)); END //
+
+CREATE TRIGGER after_request_status_update AFTER UPDATE ON requests FOR EACH ROW BEGIN IF NEW.status != OLD.status THEN INSERT INTO audit_logs (action_type, table_name, record_id, details) VALUES ('UPDATE', 'requests', NEW.id, CONCAT('Request status changed from ', OLD.status, ' to ', NEW.status)); END IF; END //
+
+CREATE TRIGGER after_donation_update AFTER UPDATE ON donations FOR EACH ROW BEGIN 
+    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN 
+        UPDATE donors SET last_donation_date = NEW.donation_date WHERE id = NEW.donor_id; 
+        INSERT INTO blood_inventory (hospital_id, blood_group, quantity) 
+        VALUES (NEW.hospital_id, NEW.blood_group, NEW.quantity) 
+        ON DUPLICATE KEY UPDATE quantity = quantity + NEW.quantity; 
+    END IF; 
+    INSERT INTO audit_logs (action_type, table_name, record_id, details) VALUES ('UPDATE', 'donations', NEW.id, CONCAT('Donation status updated to: ', NEW.status));
+END //
+
+CREATE TRIGGER after_request_update AFTER UPDATE ON requests FOR EACH ROW BEGIN 
+    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN 
+        UPDATE blood_inventory SET quantity = quantity - NEW.quantity 
+        WHERE hospital_id = NEW.hospital_id AND blood_group = NEW.blood_group; 
+    END IF; 
+END //
 
 DELIMITER ;
 

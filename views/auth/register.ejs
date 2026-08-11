@@ -8,67 +8,160 @@
     <style>
         .role-fields { display: none; }
         .active-fields { display: block; }
+
+        .role-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .role-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .role-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+        .role-card.selected {
+            border-color: var(--primary);
+            background: rgba(255, 46, 76, 0.1);
+        }
+        .role-card-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .role-card-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .role-card.selected .role-card-label {
+            color: #fff;
+        }
+
+        /* 2-row layout for 5 items */
+        .role-cards div:nth-child(n+4) {
+            grid-column: span 1;
+        }
+        .role-cards-row2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+            max-width: 66%;
+            margin-left: auto;
+            margin-right: auto;
+        }
     </style>
 </head>
 <body>
-    <div class="auth-container" style="max-width: 600px;">
+    <div class="auth-container" style="max-width: 600px; padding: 2rem 0;">
         <div class="auth-logo">🩸 BloodBank</div>
         <div class="glass-card">
             <h2>Create Account</h2>
             <p style="color: var(--text-muted); margin-bottom: 2rem;">Join our blood donation network</p>
 
-            <% if (error) { %>
+            <% if (typeof error !== 'undefined' && error) { %>
                 <div style="background: rgba(239, 68, 68, 0.1); color: var(--error); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.875rem;">
                     <%= error %>
                 </div>
             <% } %>
 
-            <form action="/auth/register" method="POST">
+            <!-- Role Selection Cards -->
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 1rem; font-size: 0.9rem; font-weight: 600;">Choose Your Role</label>
+                <div class="role-cards">
+                    <div class="role-card" onclick="selectRole('donor')" id="card-donor">
+                        <span class="role-card-icon">🩸</span>
+                        <span class="role-card-label">Donor</span>
+                    </div>
+                    <div class="role-card" onclick="selectRole('hospital')" id="card-hospital">
+                        <span class="role-card-icon">🏥</span>
+                        <span class="role-card-label">Hospital</span>
+                    </div>
+                    <div class="role-card" onclick="selectRole('doctor')" id="card-doctor">
+                        <span class="role-card-icon">🩺</span>
+                        <span class="role-card-label">Doctor</span>
+                    </div>
+                </div>
+                <div class="role-cards-row2">
+                    <div class="role-card" onclick="selectRole('admin')" id="card-admin" style="grid-column: span 2;">
+                        <span class="role-card-icon">👑</span>
+                        <span class="role-card-label">Admin</span>
+                    </div>
+                </div>
+            </div>
+
+            <form action="/auth/register" method="POST" id="registerForm">
+                <!-- Hidden Role Input -->
+                <input type="hidden" name="role" id="roleSelect" value="" required>
+
                 <div class="form-group">
-                    <label>Full Name / Hospital Name</label>
+                    <label>Full Name / Facility Name</label>
                     <input type="text" name="name" class="form-control" required>
                 </div>
                 <div class="form-group">
                     <label>Email Address</label>
                     <input type="email" name="email" class="form-control" required>
                 </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" name="password" class="form-control" required>
+                <div class="form-row" style="display: flex; gap: 1rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Password</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Confirm Password</label>
+                        <input type="password" class="form-control" required>
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label>Select Role</label>
-                    <select name="role" class="form-control" id="roleSelect" onchange="toggleFields()" required>
-                        <option value="" disabled selected>Choose your role</option>
-                        <option value="donor">Donor</option>
-                        <option value="hospital">Hospital</option>
-                        <option value="doctor">Doctor</option>
-                        <option value="patient">Patient/User</option>
-                    </select>
+                    <label>Password Hint (Optional)</label>
+                    <input type="text" name="password_hint" class="form-control" placeholder="e.g. Pet's name">
+                </div>
+
+                <!-- Admin Fields -->
+                <div id="adminFields" class="role-fields">
+                    <div class="form-group">
+                        <label>Admin ID</label>
+                        <input type="text" name="admin_id" class="form-control" placeholder="Enter assigned Admin ID">
+                    </div>
+                    <div class="form-group">
+                        <label>Admin Access Key</label>
+                        <input type="password" name="admin_key" class="form-control" placeholder="Enter Authorization Code">
+                    </div>
                 </div>
 
                 <!-- Donor Fields -->
                 <div id="donorFields" class="role-fields">
-                    <div class="form-group">
-                        <label>Blood Group</label>
-                        <select name="blood_group" class="form-control">
-                            <option value="A+">A+</option><option value="A-">A-</option>
-                            <option value="B+">B+</option><option value="B-">B-</option>
-                            <option value="AB+">AB+</option><option value="AB-">AB-</option>
-                            <option value="O+">O+</option><option value="O-">O-</option>
-                        </select>
+                    <div class="form-row" style="display: flex; gap: 1rem;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>Blood Group</label>
+                            <select name="blood_group" class="form-control">
+                                <option value="A+">A+</option><option value="A-">A-</option>
+                                <option value="B+">B+</option><option value="B-">B-</option>
+                                <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                                <option value="O+">O+</option><option value="O-">O-</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>Age (Min 18)</label>
+                            <input type="number" name="age" class="form-control" min="18">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Date of Birth</label>
                         <input type="date" name="dob" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label>Age (Min 18)</label>
-                        <input type="number" name="age" class="form-control" min="18" placeholder="Enter your age">
-                    </div>
-                    <div class="form-group">
                         <label>Address</label>
-                        <textarea name="address" class="form-control"></textarea>
+                        <textarea name="address" class="form-control" rows="2"></textarea>
                     </div>
                 </div>
 
@@ -80,7 +173,7 @@
                     </div>
                     <div class="form-group">
                         <label>Address</label>
-                        <textarea name="address" class="form-control"></textarea>
+                        <textarea name="address" class="form-control" rows="2"></textarea>
                     </div>
                 </div>
 
@@ -97,9 +190,10 @@
                     </div>
                     <div class="form-group">
                         <label>Specialization</label>
-                        <input type="text" name="specialization" class="form-control" placeholder="e.g. Hematologist">
+                        <input type="text" name="specialization" class="form-control" placeholder="e.g. Cardiologist">
                     </div>
                 </div>
+
 
                 <!-- Generic Contact (All roles need it) -->
                 <div class="form-group">
@@ -107,26 +201,50 @@
                     <input type="text" name="contact" class="form-control" required>
                 </div>
 
-                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Register Account</button>
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem; width: 100%;">Create Account</button>
             </form>
 
-            <div style="margin-top: 1.5rem; font-size: 0.875rem; color: var(--text-muted);">
+            <div style="margin-top: 1.5rem; font-size: 0.875rem; text-align: center; color: var(--text-muted);">
                 Already have an account? <a href="/auth/login" class="btn-link">Login Here</a>
             </div>
         </div>
     </div>
 
+
     <script>
-        function toggleFields() {
-            const role = document.getElementById('roleSelect').value;
-            // Hide all first
-            document.querySelectorAll('.role-fields').forEach(f => f.classList.remove('active-fields'));
-            
-            // Show selected
-            if (role === 'donor') document.getElementById('donorFields').classList.add('active-fields');
-            if (role === 'hospital') document.getElementById('hospitalFields').classList.add('active-fields');
-            if (role === 'doctor') document.getElementById('doctorFields').classList.add('active-fields');
+        function selectRole(role) {
+            // Update hidden input
+            document.getElementById('roleSelect').value = role;
+
+            // Update card selection UI
+            document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById('card-' + role).classList.add('selected');
+
+            // Toggle fields
+            toggleFields(role);
         }
+
+        function toggleFields(role) {
+            // Hide all sections and disable their inputs
+            document.querySelectorAll('.role-fields').forEach(f => {
+                f.classList.remove('active-fields');
+                f.querySelectorAll('input, select, textarea').forEach(input => {
+                    input.disabled = true;
+                });
+            });
+            
+            // Show selected section and enable its inputs
+            let activeId = role + 'Fields';
+
+            if (document.getElementById(activeId)) {
+                const activeSection = document.getElementById(activeId);
+                activeSection.classList.add('active-fields');
+                activeSection.querySelectorAll('input, select, textarea').forEach(input => {
+                    input.disabled = false;
+                });
+            }
+        }
+
     </script>
 </body>
 </html>

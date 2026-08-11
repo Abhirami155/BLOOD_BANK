@@ -6,48 +6,271 @@
     <title>BloodBank - Connect, Donate, Save Lives</title>
     <link rel="stylesheet" href="/css/style.css">
     <style>
-        .hero {
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrollbars from animated blobs */
+            background-color: var(--background);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        /* Animated Background Blobs */
+        .blob-container {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden;
+            z-index: 0;
+        }
+        .blob {
+            position: absolute;
+            filter: blur(80px);
+            opacity: 0.6;
+            animation: float 20s infinite ease-in-out alternate;
+            will-change: transform;
+        }
+        .blob-1 {
+            top: -10%; left: -10%;
+            width: 50vw; height: 50vw;
+            background: radial-gradient(circle, rgba(225, 29, 72, 0.4), transparent 70%);
+            animation-delay: 0s;
+        }
+        .blob-2 {
+            bottom: -10%; right: -10%;
+            width: 60vw; height: 60vw;
+            background: radial-gradient(circle, rgba(30, 64, 175, 0.4), transparent 70%);
+            animation-delay: -5s;
+        }
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(5%, 10%) scale(1.1); }
+        }
+
+        /* Glow Cursor */
+        .glow-cursor {
+            position: fixed;
+            top: 0; left: 0;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(225, 29, 72, 0.15), transparent 60%);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            transition: opacity 0.3s;
+            mix-blend-mode: screen;
+            will-change: left, top;
+        }
+
+        /* Main Container */
+        .hero-container {
+            position: relative;
+            z-index: 1;
             height: 100vh;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: radial-gradient(circle at top right, rgba(225, 29, 72, 0.15), transparent),
-                        radial-gradient(circle at bottom left, rgba(30, 41, 59, 1), #0f172a);
-            text-align: center;
-            padding: 2rem;
+            perspective: 1000px;
+            padding: 1rem;
         }
-        .hero h1 { font-size: 4rem; font-weight: 900; margin-bottom: 1rem; }
-        .hero p { font-size: 1.25rem; color: var(--text-muted); max-width: 600px; margin-bottom: 3rem; }
-        .hero-btns { display: flex; gap: 1.5rem; }
-        .hero-btns .btn { width: 200px; }
+
+        /* Glassmorphism Card */
+        .hero-glass-card {
+            background-color: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(20px) saturate(200%);
+            -webkit-backdrop-filter: blur(20px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            padding: 4rem 3rem;
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
+            will-change: transform;
+        }
+
+        /* Logo Animation */
+        .animated-logo {
+            font-size: 5rem;
+            display: inline-block;
+            margin-bottom: 1rem;
+            animation: heartbeat 2.5s infinite ease-in-out;
+            filter: drop-shadow(0 0 20px rgba(225, 29, 72, 0.5));
+            transform: translateZ(30px); /* 3D pop effect */
+        }
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1) translateZ(30px); }
+            10% { transform: scale(1.1) translateZ(30px); }
+            20% { transform: scale(1) translateZ(30px); }
+            30% { transform: scale(1.1) translateZ(30px); }
+        }
+
+        /* Typography */
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+            transform: translateZ(20px);
+            text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .hero-tagline {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            transform: translateZ(10px);
+        }
+
+        /* Buttons */
+        .hero-btns {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            transform: translateZ(25px);
+        }
+        .magnetic-btn {
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            transition: transform 0.1s ease-out, box-shadow 0.3s ease, background 0.3s ease;
+            width: 180px;
+            will-change: transform;
+            cursor: pointer;
+        }
+        .btn-primary-glow {
+            background: linear-gradient(135deg, var(--primary), #b91c1c);
+            color: white;
+            box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3);
+            border: none;
+        }
+        .btn-primary-glow:hover {
+            box-shadow: 0 8px 25px rgba(225, 29, 72, 0.5);
+        }
+        .btn-outline-glow {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+            text-decoration: none;
+        }
+        .btn-outline-glow:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.05);
+        }
+
+        /* Responsive constraints */
+        @media (max-width: 768px) {
+            .glow-cursor { display: none; } /* Disable custom cursor on mobile */
+            .hero-title { font-size: 2.5rem; }
+            .hero-btns { flex-direction: column; align-items: center; }
+            .magnetic-btn { width: 100%; }
+            body { overflow: auto; } /* Allow scroll if needed on tiny screens */
+            .hero-container { height: auto; min-height: 100vh; }
+        }
     </style>
 </head>
 <body>
-    <div class="hero">
-        <div class="auth-logo" style="font-size: 4.5rem; margin-bottom: 1rem;">🩸</div>
-        <h1>BloodBank MS</h1>
-        <p>A scalable, real-time platform connecting hospitals, doctors, and donors to ensure no request goes unfulfilled.</p>
-        
-        <div class="hero-btns">
-            <a href="/auth/login" class="btn btn-primary">Get Started</a>
-            <a href="/auth/register" class="btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">Register Account</a>
-        </div>
 
-        <div style="margin-top: 5rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3rem; max-width: 900px;">
-            <div>
-                <h3 style="color: var(--primary);">Real-time Stock</h3>
-                <p style="font-size: 0.9rem; color: var(--text-muted);">Monitor blood availability across all registered bank branches.</p>
-            </div>
-            <div>
-                <h3 style="color: var(--primary);">Secure RBAC</h3>
-                <p style="font-size: 0.9rem; color: var(--text-muted);">Advanced role-based access for Admins, Doctors, and Patients.</p>
-            </div>
-            <div>
-                <h3 style="color: var(--primary);">Emergency Ready</h3>
-                <p style="font-size: 0.9rem; color: var(--text-muted);">Priority request system for critical medical emergencies.</p>
+    <!-- Glow Cursor -->
+    <div class="glow-cursor"></div>
+
+    <!-- Animated Background -->
+    <div class="blob-container">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="hero-container">
+        <div class="hero-glass-card">
+            <div class="animated-logo">🩸</div>
+            <h1 class="hero-title">Blood Bank</h1>
+            <p class="hero-tagline">Save Lives. Donate Blood. Be a Hero.</p>
+            
+            <div class="hero-btns">
+                <a href="/auth/login" class="btn magnetic-btn btn-primary-glow">Login</a>
+                <a href="/auth/register" class="btn magnetic-btn btn-outline-glow">Register Now</a>
             </div>
         </div>
     </div>
+
+    <script>
+        // Check if device is touch/mobile to disable heavy effects
+        const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+        if (!isMobile) {
+            const cursor = document.querySelector('.glow-cursor');
+            const card = document.querySelector('.hero-glass-card');
+            const blobs = document.querySelectorAll('.blob');
+            const buttons = document.querySelectorAll('.magnetic-btn');
+
+            let mouseX = window.innerWidth / 2;
+            let mouseY = window.innerHeight / 2;
+            
+            // 1. Glow Cursor & Parallax Logic
+            document.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                
+                // Glow Cursor tracking
+                requestAnimationFrame(() => {
+                    cursor.style.left = mouseX + 'px';
+                    cursor.style.top = mouseY + 'px';
+                });
+                
+                // Background Parallax
+                const xRatio = (mouseX / window.innerWidth - 0.5) * 2;
+                const yRatio = (mouseY / window.innerHeight - 0.5) * 2;
+                
+                blobs.forEach((blob, index) => {
+                    const speed = (index + 1) * 30;
+                    blob.style.transform = `translate(${xRatio * -speed}px, ${yRatio * -speed}px)`;
+                });
+            });
+
+            // 2. Card 3D Tilt Effect
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                // Calculate rotation (max 10 degrees)
+                const rotateX = ((y - centerY) / centerY) * -10; 
+                const rotateY = ((x - centerX) / centerX) * 10;
+                
+                requestAnimationFrame(() => {
+                    card.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                });
+            });
+
+            card.addEventListener('mouseleave', () => {
+                requestAnimationFrame(() => {
+                    card.style.transform = `rotateX(0deg) rotateY(0deg)`;
+                });
+            });
+
+            // 3. Button Magnetic Effect
+            buttons.forEach(btn => {
+                btn.addEventListener('mousemove', (e) => {
+                    const rect = btn.getBoundingClientRect();
+                    const x = e.clientX - rect.left - rect.width / 2;
+                    const y = e.clientY - rect.top - rect.height / 2;
+                    
+                    // Move button slightly towards cursor
+                    requestAnimationFrame(() => {
+                        btn.style.transform = `translate(${x * 0.3}px, ${y * 0.3}px) scale(1.05)`;
+                    });
+                });
+                
+                btn.addEventListener('mouseleave', () => {
+                    requestAnimationFrame(() => {
+                        btn.style.transform = `translate(0px, 0px) scale(1)`;
+                    });
+                });
+            });
+        }
+    </script>
 </body>
 </html>

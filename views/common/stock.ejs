@@ -5,18 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Global Blood Inventory - Blood Bank MS</title>
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.9; }
+            70% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.9; }
+        }
+    </style>
 </head>
 <body class="dashboard-layout">
     <%- include('../partials/sidebar') %>
 
     <main class="main-content">
-        <header style="margin-bottom: 2rem;">
-            <h1>Global Inventory Monitoring</h1>
-            <p style="color: var(--text-muted);">Real-time blood stock across all hospital network entities</p>
+        <header style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end;">
+            <div>
+                <h1>Global Inventory Monitoring</h1>
+                <p style="color: var(--text-muted);">Real-time blood stock across all hospital network entities</p>
+            </div>
+            <div style="font-size: 0.75rem; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 700;">
+                <span style="display: inline-block; width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-right: 5px; animation: pulse 1.5s infinite;"></span>
+                LIVE MONITORING ACTIVE
+            </div>
         </header>
 
         <section class="glass-card">
-            <h3>Complete Stock List</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3>Complete Stock List</h3>
+                <button onclick="window.location.reload()" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">
+                    🔄 Refresh Data
+                </button>
+            </div>
             <table class="data-table">
                 <thead>
                     <tr>

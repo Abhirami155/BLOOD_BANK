@@ -5,6 +5,7 @@ const { isHospital } = require('../middlewares/auth');
 
 router.get('/dashboard', isHospital, hospitalController.getDashboard);
 router.get('/patients', isHospital, hospitalController.getPatients);
+router.get('/search-donors', isHospital, hospitalController.getSearchDonors);
 router.get('/inventory', isHospital, hospitalController.getInventory);
 router.post('/patients/add', isHospital, hospitalController.addPatient);
 router.post('/inventory', isHospital, hospitalController.updateInventory);

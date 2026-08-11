@@ -8,19 +8,23 @@
             <a href="/admin/hospitals" class="nav-link">Hospitals List</a>
             <a href="/admin/doctors" class="nav-link">Doctors List</a>
             <a href="/admin/donors" class="nav-link">Donors List</a>
-        <% } else if (user.role === 'hospital') { %>
+            <a href="/admin/patients" class="nav-link">Patients List</a>
+            <a href="/admin/donations" class="nav-link">Donation History</a>
+<% } else if (user.role === 'hospital') { %>
             <a href="/hospital/dashboard" class="nav-link">Dashboard</a>
+            <a href="/hospital/dashboard#requests" class="nav-link">Incoming Requests</a>
             <a href="/hospital/inventory" class="nav-link">My Inventory</a>
             <a href="/hospital/patients" class="nav-link">Patient Records</a>
+            <a href="/hospital/search-donors" class="nav-link">🔍 Search Donors</a>
         <% } else if (user.role === 'doctor') { %>
             <a href="/doctor/dashboard" class="nav-link">Dashboard</a>
-            <a href="/doctor/patients" class="nav-link">Patient History</a>
+            <a href="/doctor/patients" class="nav-link">My Patients</a>
         <% } else if (user.role === 'donor') { %>
             <a href="/donor/dashboard" class="nav-link">Dashboard</a>
             <a href="/donor/history" class="nav-link">My Donations</a>
         <% } else if (user.role === 'patient') { %>
             <a href="/patient/dashboard" class="nav-link">Dashboard</a>
-            <a href="/patient/requests" class="nav-link">My Requests</a>
+            <a href="/patient/dashboard#requests" class="nav-link">Track My Requests</a>
         <% } %>
 
         <div style="margin-top: 2rem; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Global Network</div>
@@ -28,7 +32,84 @@
         <a href="/common/search" class="nav-link">Search Blood</a>
 
         <div style="margin-top: auto; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 2rem;">
-            <a href="/auth/logout" class="nav-link" style="color: var(--error);">Logout</a>
+            <a href="/auth/logout" class="nav-link" style="color: var(--text-muted);">Logout</a>
+            <% if (user.role !== 'admin') { %>
+                <% if (typeof hasPendingDeactivation !== 'undefined' && hasPendingDeactivation) { %>
+                    <a href="#" class="nav-link" style="color: var(--warning); margin-top: 0.5rem; opacity: 0.8; cursor: not-allowed;" title="Admin is reviewing your request">Deactivation Pending...</a>
+                <% } else { %>
+                    <a href="#" onclick="showDeactivateModal(event)" class="nav-link" style="color: var(--error); margin-top: 0.5rem; font-weight: bold;">Request Deactivation</a>
+                <% } %>
+            <% } %>
         </div>
     </nav>
 </aside>
+
+<!-- Deactivation Request Modal -->
+<div id="deactivateModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+    <div class="glass-card" style="max-width: 400px; padding: 2rem; text-align: center; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+        <h3 style="color: var(--primary); margin-bottom: 1rem;">Account Deactivation</h3>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">Your account access will be disabled, but historical records will remain preserved for clinical auditing. Continue?</p>
+        
+        <div class="form-group" style="text-align: left; margin-bottom: 1.5rem;">
+            <label style="font-size: 0.8rem; margin-bottom: 0.5rem; display: block;">Reason (Optional)</label>
+            <textarea id="deactivateReason" class="form-control" placeholder="Why would you like to deactivate?" style="background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); width: 100%; border-radius: 6px; padding: 0.5rem;"></textarea>
+        </div>
+
+        <div id="deactivateMessage" style="display: none; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.8rem;"></div>
+        
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <button type="button" onclick="hideDeactivateModal()" class="btn btn-secondary" style="flex: 1; padding: 0.5rem; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: white; border-radius: 6px; cursor: pointer;">Cancel</button>
+            <button type="button" id="confirmDeactivateBtn" onclick="submitDeactivateRequest()" class="btn btn-primary" style="flex: 1; padding: 0.5rem; font-size: 0.9rem; background: var(--primary); border: none; color: white; border-radius: 6px; cursor: pointer;">Submit Request</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function showDeactivateModal(e) {
+    if (e) e.preventDefault();
+    document.getElementById('deactivateModal').style.display = 'flex';
+    document.getElementById('deactivateMessage').style.display = 'none';
+}
+
+function hideDeactivateModal() {
+    document.getElementById('deactivateModal').style.display = 'none';
+}
+
+async function submitDeactivateRequest() {
+    const btn = document.getElementById('confirmDeactivateBtn');
+    const msgDiv = document.getElementById('deactivateMessage');
+    const reason = document.getElementById('deactivateReason').value;
+    
+    btn.disabled = true;
+    btn.innerHTML = 'Submitting...';
+    
+    try {
+        const response = await fetch('/api/user/request-deactivation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            msgDiv.innerText = 'Request submitted successfully. Admin will review it shortly.';
+            msgDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+            msgDiv.style.color = '#10b981';
+            msgDiv.style.display = 'block';
+            setTimeout(() => hideDeactivateModal(), 3000);
+        } else {
+            msgDiv.innerText = data.message || 'Failed to submit request.';
+            msgDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+            msgDiv.style.color = 'var(--error)';
+            msgDiv.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = 'Submit Request';
+        }
+    } catch (err) {
+        msgDiv.innerText = 'An error occurred. Please try again.';
+        msgDiv.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = 'Submit Request';
+    }
+}
+</script>

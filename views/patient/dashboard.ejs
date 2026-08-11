@@ -5,6 +5,95 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Patient Dashboard - Blood Bank MS</title>
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        /* Progress Timeline Styles */
+        .timeline-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 2rem 0;
+            padding: 0 1rem;
+            position: relative;
+        }
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 1;
+            transform: translateY(-50%);
+        }
+        .timeline-step {
+            z-index: 2;
+            background: var(--bg-dark);
+            text-align: center;
+            width: 80px;
+        }
+        .step-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #333;
+            border: 2px solid #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.5rem;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+        }
+        .step-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .timeline-step.active .step-icon {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(255, 46, 76, 0.4);
+        }
+        .timeline-step.active .step-label {
+            color: #fff;
+        }
+        .timeline-step.completed .step-icon {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background-color: var(--card-bg);
+            margin: 10% auto;
+            padding: 2rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            position: relative;
+        }
+        .close-modal {
+            position: absolute;
+            right: 1.5rem;
+            top: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+    </style>
 </head>
 <body class="dashboard-layout">
     <%- include('../partials/sidebar') %>
@@ -12,30 +101,110 @@
     <main class="main-content">
         <header style="margin-bottom: 2rem;">
             <h1>Patient Dashboard</h1>
-            <p style="color: var(--text-muted);">Search for blood groups and availability</p>
+            <p style="color: var(--text-muted);">Track your medical blood requests and assigned care team</p>
         </header>
 
-        <!-- Search Section -->
+        <% if (!patient) { %>
+            <div class="glass-card" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                <h3>Profile Not Linked</h3>
+                <p>Your account is not yet linked to a patient profile. Please contact hospital administration.</p>
+            </div>
+        <% } else { %>
+
+        <!-- My Care Team Card -->
+        <section class="glass-card" style="margin-bottom: 2.5rem; border-top: 4px solid var(--primary);">
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem;">🏥 My Care Team</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 2rem;">
+                <!-- Doctor Info -->
+                <div style="padding: 1.5rem; background: rgba(255,255,255,0.03); border-radius: 12px;">
+                    <h4 style="color: var(--primary); margin-bottom: 1rem; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Assigned Doctor</h4>
+                    <% if (patient.doctor_name) { %>
+                        <div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.25rem;">Dr. <%= patient.doctor_name %></div>
+                        <div style="color: var(--text-muted); margin-bottom: 1rem;"><%= patient.doctor_specialization || 'Attending Physician' %></div>
+                        <button onclick="openDoctorModal()" class="btn btn-primary" style="width: auto; padding: 0.6rem 1.2rem;">
+                            📞 Contact Doctor
+                        </button>
+                    <% } else { %>
+                        <p style="color: var(--text-muted);">No doctor assigned yet.</p>
+                    <% } %>
+                </div>
+                <!-- Hospital Info -->
+                <div style="padding: 1.5rem; background: rgba(255,255,255,0.03); border-radius: 12px;">
+                    <h4 style="color: var(--success); margin-bottom: 1rem; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Hospital Facility</h4>
+                    <div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.25rem;"><%= patient.hospital_name %></div>
+                    <div style="color: var(--text-muted); margin-bottom: 0.5rem;"><%= patient.hospital_city %></div>
+                    <div style="font-size: 0.9rem; color: var(--text-muted);">Contact: <%= patient.hospital_contact || 'N/A' %></div>
+                    <div style="margin-top: 0.75rem;">
+                        <span style="font-size: 0.8rem; background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 4px;">
+                            My Blood Group: <b style="color: var(--primary);"><%= patient.blood_group %></b>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Current Request Progress -->
+        <% if (requests && requests.length > 0) { 
+            const latest = requests[0];
+            const steps = ['pending', 'approved', 'processing', 'completed'];
+            const currentIndex = steps.indexOf(latest.status);
+        %>
+            <section class="glass-card" style="margin-bottom: 2.5rem;">
+                <h3>📊 Current Request Progress</h3>
+                <p style="color: var(--text-muted); font-size: 0.875rem;">Tracking status for your most recent blood request (<%= latest.blood_group %>, <%= latest.quantity %> Units)</p>
+                
+                <div class="timeline-container">
+                    <div class="timeline-step <%= currentIndex >= 0 ? 'active' : '' %> <%= currentIndex > 0 ? 'completed' : '' %>">
+                        <div class="step-icon"><%= currentIndex > 0 ? '✓' : '1' %></div>
+                        <div class="step-label">Requested</div>
+                    </div>
+                    <div class="timeline-step <%= currentIndex >= 1 ? 'active' : '' %> <%= currentIndex > 1 ? 'completed' : '' %>">
+                        <div class="step-icon"><%= currentIndex > 1 ? '✓' : '2' %></div>
+                        <div class="step-label">Approved</div>
+                    </div>
+                    <div class="timeline-step <%= currentIndex >= 2 ? 'active' : '' %> <%= currentIndex > 2 ? 'completed' : '' %>">
+                        <div class="step-icon"><%= currentIndex > 2 ? '✓' : '3' %></div>
+                        <div class="step-label">Processing</div>
+                    </div>
+                    <div class="timeline-step <%= currentIndex >= 3 ? 'active' : '' %>">
+                        <div class="step-icon"><%= currentIndex === 3 ? '✓' : '4' %></div>
+                        <div class="step-label">Completed</div>
+                    </div>
+                </div>
+                
+                <% if (latest.status === 'rejected') { %>
+                    <div style="background: rgba(255, 10, 50, 0.1); border: 1px solid var(--error); padding: 1rem; border-radius: 8px; text-align: center; color: var(--error);">
+                        ⚠️ <b>Request Rejected:</b> Blood unavailable. Please consult your doctor for alternative treatment options.
+                    </div>
+                <% } %>
+            </section>
+        <% } %>
+
+        <!-- Check Blood Availability -->
         <section class="glass-card" style="margin-bottom: 2.5rem;">
-            <h3>Quick Search</h3>
-            <form action="/patient/search" method="POST" style="display: flex; gap: 1rem; margin-top: 1rem; align-items: flex-end;">
+            <h3>🔍 Check Blood Availability</h3>
+            <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem;">
+                View blood availability across nearby hospitals for reference. Final blood requests must be raised by your assigned doctor.
+            </p>
+            <form action="/patient/search" method="POST" style="display: flex; gap: 1rem; margin-top: 1.5rem; align-items: flex-end;">
                 <div class="form-group" style="flex: 1; margin-bottom: 0;">
                     <label>Blood Group</label>
                     <select name="blood_group" class="form-control" required>
+                        <option value="<%= patient.blood_group %>" selected><%= patient.blood_group %> (My Group)</option>
                         <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
                         <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
                     </select>
                 </div>
                 <div class="form-group" style="flex: 1; margin-bottom: 0;">
                     <label>City</label>
-                    <input type="text" name="city" class="form-control" placeholder="Search City">
+                    <input type="text" name="city" class="form-control" placeholder="Search City" value="<%= patient.hospital_city %>">
                 </div>
                 <button type="submit" class="btn btn-primary" style="width: auto;">Search Availability</button>
             </form>
 
-            <% if (searchResults) { %>
+            <% if (typeof searchResults !== 'undefined' && searchResults) { %>
                 <div style="margin-top: 2rem;">
-                    <h4>Availability Comparison</h4>
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -66,12 +235,18 @@
             <% } %>
         </section>
 
-        <!-- Requests History -->
+        <!-- Blood Request History Tracking -->
         <section id="requests" class="glass-card">
-            <h3>My Active Blood Requests</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3>📋 Blood Request History</h3>
+                <div style="font-size: 0.8rem; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 0.4rem 0.8rem; border-radius: 6px;">
+                    Medical view only
+                </div>
+            </div>
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th>Assigned Doctor</th>
                         <th>Hospital</th>
                         <th>Group</th>
                         <th>Qty</th>
@@ -82,22 +257,113 @@
                 </thead>
                 <tbody>
                     <% if (requests.length === 0) { %>
-                        <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No requests raised yet</td></tr>
+                        <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No blood requests have been raised for you yet.</td></tr>
                     <% } else { %>
                         <% requests.forEach(r => { %>
                             <tr>
+                                <td>Dr. <%= r.doctor_name || 'N/A' %></td>
                                 <td><%= r.hospital_name %></td>
                                 <td><span style="font-weight: 700; color: var(--primary);"><%= r.blood_group %></span></td>
                                 <td><%= r.quantity %></td>
                                 <td><span style="color: <%= r.urgency === 'emergency' ? 'var(--error)' : 'var(--text-muted)' %>"><%= r.urgency.toUpperCase() %></span></td>
-                                <td><span class="badge badge-<%= r.status %>"><%= r.status.toUpperCase() %></span></td>
+                                <td>
+                                    <% if (r.status === 'pending') { %>
+                                        <span class="badge badge-pending">PENDING</span>
+                                    <% } else if (r.status === 'approved') { %>
+                                        <span class="badge" style="background: var(--success);">APPROVED</span>
+                                    <% } else if (r.status === 'processing') { %>
+                                        <span class="badge" style="background: #3b82f6;">PROCESSING</span>
+                                    <% } else if (r.status === 'completed') { %>
+                                        <span class="badge badge-completed">COMPLETED</span>
+                                    <% } else if (r.status === 'rejected') { %>
+                                        <span class="badge badge-rejected">REJECTED</span>
+                                    <% } %>
+                                </td>
                                 <td><%= new Date(r.created_at).toLocaleDateString() %></td>
                             </tr>
                         <% }) %>
                     <% } %>
                 </tbody>
             </table>
+
+            <p style="margin-top: 1.5rem; color: var(--text-muted); font-size: 0.85rem; text-align: center; font-style: italic;">
+                "Blood requests are created only by your assigned doctor after medical evaluation."
+            </p>
+
+            <!-- Status Descriptions -->
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                <div style="font-size: 0.8rem;">
+                    <b style="color: #facc15;">PENDING:</b> <span style="color: var(--text-muted);">Awaiting hospital review</span>
+                </div>
+                <div style="font-size: 0.8rem;">
+                    <b style="color: var(--success);">APPROVED:</b> <span style="color: var(--text-muted);">Blood request approved and being prepared</span>
+                </div>
+                <div style="font-size: 0.8rem;">
+                    <b style="color: var(--success);">COMPLETED:</b> <span style="color: var(--text-muted);">Blood successfully issued</span>
+                </div>
+                <div style="font-size: 0.8rem;">
+                    <b style="color: var(--error);">REJECTED:</b> <span style="color: var(--text-muted);">Blood unavailable. Please consult your doctor</span>
+                </div>
+            </div>
         </section>
+
+        <% } %>
     </main>
+
+    <!-- Doctor Contact Modal -->
+    <div id="doctorModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeDoctorModal()">&times;</span>
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <div style="width: 64px; height: 64px; background: rgba(255,46,76,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                    <span style="font-size: 2rem;">🩺</span>
+                </div>
+                <h3 style="margin-bottom: 0.25rem;">Doctor Contact Card</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">Clinical Information Only</p>
+            </div>
+            
+            <% if (patient && patient.doctor_name) { %>
+            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem; line-height: 2;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Doctor Name:</span>
+                    <span style="font-weight: 600;">Dr. <%= patient.doctor_name %></span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Specialization:</span>
+                    <span><%= patient.doctor_specialization || 'Attending Physician' %></span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Contact Number:</span>
+                    <span style="color: var(--primary); font-weight: 700;"><%= patient.doctor_contact %></span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Hospital:</span>
+                    <span><%= patient.hospital_name %></span>
+                </div>
+            </div>
+            
+            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                <a href="tel:<%= patient.doctor_contact %>" class="btn btn-primary" style="flex: 1; text-align: center;">Call Doctor</a>
+                <button onclick="closeDoctorModal()" class="btn" style="flex: 1; background: rgba(255,255,255,0.1);">Close</button>
+            </div>
+            <% } %>
+        </div>
+    </div>
+
+    <script>
+        function openDoctorModal() {
+            document.getElementById('doctorModal').style.display = 'block';
+        }
+        function closeDoctorModal() {
+            document.getElementById('doctorModal').style.display = 'none';
+        }
+        // Close on outside click
+        window.onclick = function(event) {
+            let modal = document.getElementById('doctorModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>

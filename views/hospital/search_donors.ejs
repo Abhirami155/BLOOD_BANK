@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Donors - Blood Bank MS</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .search-container {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            align-items: flex-end;
+        }
+        .donor-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .donor-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(255, 0, 0, 0.15);
+        }
+        .contact-hidden {
+            filter: blur(4px);
+            user-select: none;
+            cursor: pointer;
+        }
+        .contact-visible {
+            filter: none;
+        }
+    </style>
+</head>
+<body class="dashboard-layout">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header style="margin-bottom: 2.5rem;">
+            <h1>🔍 Find Eligible Donors</h1>
+            <p style="color: var(--text-muted);">Locate and contact active donors in your region to replenish inventory</p>
+        </header>
+
+        <!-- Search Form -->
+        <section class="glass-card" style="margin-bottom: 2.5rem;">
+            <form action="/hospital/search-donors" method="GET" class="search-container">
+                <div class="form-group" style="flex: 1;">
+                    <label>Blood Group</label>
+                    <select name="blood_group" class="form-control">
+                        <option value="">— All Blood Groups —</option>
+                        <% ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].forEach(bg => { %>
+                            <option value="<%= bg %>" <%= searchParams.blood_group === bg ? 'selected' : '' %>><%= bg %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1.5;">
+                    <label>City / Area Name</label>
+                    <input type="text" name="city" class="form-control" placeholder="Enter city or location..." value="<%= searchParams.city || '' %>">
+                </div>
+                <button type="submit" class="btn btn-primary" style="height: 45px; min-width: 150px;">Search Donors</button>
+                <a href="/hospital/search-donors" class="btn btn-secondary" style="height: 45px; display: flex; align-items: center; justify-content: center;">Reset</a>
+            </form>
+        </section>
+
+        <!-- Results -->
+        <section class="glass-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3>Available Matches (<%= donors.length %>)</h3>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">
+                    Showing only 🟢 ACTIVE & APPROVED donors
+                </div>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Donor Name</th>
+                        <th>Blood Group</th>
+                        <th>Location</th>
+                        <th>Contact info</th>
+                        <th>Status</th>
+                        <th>Last Donation</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (donors.length === 0) { %>
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                                No matching donors found. Try adjusting your search criteria.
+                            </td>
+                        </tr>
+                    <% } else { %>
+                        <% donors.forEach(donor => { %>
+                            <tr class="donor-card">
+                                <td style="font-weight: 600;">
+                                    <%= donor.name %>
+                                    <div style="font-size: 0.65rem; color: var(--text-muted);">ID: #<%= donor.id %></div>
+                                </td>
+                                <td><span style="color: var(--primary); font-weight: 800; font-size: 1.1rem;"><%= donor.blood_group %></span></td>
+                                <td style="max-width: 200px; font-size: 0.85rem;"><%= donor.address %></td>
+                                <td>
+                                    <span class="contact-hidden" onclick="this.classList.toggle('contact-visible'); this.classList.toggle('contact-hidden')">
+                                        <%= donor.contact %>
+                                    </span>
+                                    <div style="font-size: 0.6rem; color: var(--text-muted);">Click to reveal</div>
+                                </td>
+                                <td><span class="badge badge-active">ACTIVE</span></td>
+                                <td style="font-size: 0.85rem;">
+                                    <%= donor.last_donation ? new Date(donor.last_donation).toLocaleDateString() : 'N/A' %>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <a href="/hospital/dashboard?prefill_donor_id=<%= donor.id %>&prefill_group=<%= donor.blood_group %>" 
+                                           class="btn btn-primary" 
+                                           style="padding: 0.4rem 0.8rem; font-size: 0.75rem; background: #10b981;">
+                                           🩸 Mark Donation
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+</html>

@@ -10,14 +10,24 @@
     <%- include('../partials/sidebar') %>
 
     <main class="main-content">
-        <header style="margin-bottom: 2rem;">
-            <h1>Donor Database</h1>
-            <p style="color: var(--text-muted);">Manage and track registered donors and their statuses</p>
+        <header style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end;">
+            <div>
+                <h1>Donor Database</h1>
+                <p style="color: var(--text-muted);">Manage and track registered donors and their statuses</p>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <select id="statusFilter" class="form-control" style="width: 200px;" onchange="filterDonors()">
+                    <option value="all">All Statuses</option>
+                    <option value="active">🟢 Active</option>
+                    <option value="inactive">🔴 Inactive</option>
+                </select>
+                <input type="text" id="donorSearch" class="form-control" placeholder="Search donors..." style="width: 250px;" onkeyup="filterDonors()">
+            </div>
         </header>
 
         <section class="glass-card">
             <h3>Registered Donors</h3>
-            <table class="data-table">
+            <table class="data-table" id="donorTable">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -25,7 +35,7 @@
                         <th>Blood Group</th>
                         <th>Last Donation</th>
                         <th>Status</th>
-                        <th>Contact</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -33,13 +43,30 @@
                         <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No donors found</td></tr>
                     <% } else { %>
                         <% donors.forEach(d => { %>
-                            <tr>
+                            <tr class="donor-row" data-status="<%= d.status %>">
                                 <td>#<%= d.id %></td>
-                                <td style="font-weight: 600;"><%= d.name %></td>
-                                <td><span class="badge badge-pending" style="background: rgba(225, 29, 72, 0.1); color: var(--primary);"><%= d.blood_group %></span></td>
+                                <td style="font-weight: 600;" class="donor-name"><%= d.name %></td>
+                                <td><span class="badge" style="background: rgba(225, 29, 72, 0.1); color: var(--primary);"><%= d.blood_group %></span></td>
                                 <td><%= d.last_donation_date ? new Date(d.last_donation_date).toLocaleDateString() : 'Never' %></td>
-                                <td><span class="badge badge-<%= d.registration_status %>"><%= d.registration_status.toUpperCase() %></span></td>
-                                <td><%= d.contact %></td>
+                                <td><span class="badge badge-<%= d.status || 'active' %>"><%= (d.status || 'active').toUpperCase() %></span></td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button class="action-btn action-btn-view" onclick="viewDetails('<%= d.user_id %>', 'donor')">👁️ View</button>
+                                        
+                                        <% if (d.registration_status === 'pending') { %>
+                                            <form action="/admin/donor/approve/<%= d.id %>" method="POST" style="margin:0;">
+                                                <button type="submit" class="action-btn action-btn-success">✅ Approve</button>
+                                            </form>
+                                            <form action="/admin/donor/reject/<%= d.id %>" method="POST" style="margin:0;">
+                                                <button type="submit" class="action-btn action-btn-danger">❌ Reject</button>
+                                            </form>
+                                        <% } else if ((d.status || 'active') === 'active') { %>
+                                            <button class="action-btn action-btn-warning" onclick="toggleStatus('<%= d.user_id %>', 'inactive')">⛔ Deactivate</button>
+                                        <% } else { %>
+                                            <button class="action-btn action-btn-success" onclick="toggleStatus('<%= d.user_id %>', 'active')">✅ Reactivate</button>
+                                        <% } %>
+                                    </div>
+                                </td>
                             </tr>
                         <% }) %>
                     <% } %>
@@ -47,5 +74,84 @@
             </table>
         </section>
     </main>
+
+    <!-- Details Modal -->
+    <div class="modal-overlay" id="detailsModal">
+        <div class="modal-container glass-card">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <h2 id="modalTitle">User Details</h2>
+            <div id="modalBody">
+                <!-- Content injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function filterDonors() {
+            const status = document.getElementById('statusFilter').value;
+            const search = document.getElementById('donorSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('.donor-row');
+
+            rows.forEach(row => {
+                const rowStatus = row.dataset.status;
+                const rowName = row.querySelector('.donor-name').innerText.toLowerCase();
+                const matchesStatus = status === 'all' || rowStatus === status;
+                const matchesSearch = rowName.includes(search);
+                row.style.display = (matchesStatus && matchesSearch) ? '' : 'none';
+            });
+        }
+
+        async function viewDetails(userId, role) {
+            try {
+                const res = await fetch(`/admin/details/${role}/${userId}`);
+                const data = await res.json();
+                
+                let body = `
+                    <div class="details-grid">
+                        <div class="details-item"><label>Name</label><p>${data.name}</p></div>
+                        <div class="details-item"><label>Blood Group</label><p>${data.blood_group}</p></div>
+                        <div class="details-item"><label>Age</label><p>${data.age}</p></div>
+                        <div class="details-item"><label>Contact</label><p>${data.contact}</p></div>
+                        <div class="details-item" style="grid-column: span 2;"><label>Address</label><p>${data.address}</p></div>
+                    </div>
+                    <div class="modal-section-title">Donation History</div>
+                    <table class="data-table" style="font-size: 0.85rem;">
+                        <thead><tr><th>Date</th><th>Units</th><th>Status</th></tr></thead>
+                        <tbody>
+                            ${data.history && data.history.length > 0 ? 
+                                data.history.map(h => `<tr><td>${new Date(h.donation_date).toLocaleDateString()}</td><td>${h.quantity}</td><td>${h.status}</td></tr>`).join('') 
+                                : '<tr><td colspan="3" style="text-align:center">No donations recorded</td></tr>'}
+                        </tbody>
+                    </table>
+                `;
+                
+                document.getElementById('modalTitle').innerText = `Donor Profile: ${data.name}`;
+                document.getElementById('modalBody').innerHTML = body;
+                document.getElementById('detailsModal').classList.add('active');
+            } catch (err) {
+                alert('Error fetching details');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('detailsModal').classList.remove('active');
+        }
+
+        async function toggleStatus(userId, newStatus) {
+            if (!confirm(`Are you sure you want to ${newStatus === 'inactive' ? 'deactivate' : 'reactivate'} this donor account?`)) return;
+            try {
+                const res = await fetch('/admin/toggle-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, newStatus })
+                });
+                const data = await res.json();
+                if (data.success) location.reload();
+                else alert('Operation failed');
+            } catch (err) {
+                alert('Error toggling status');
+            }
+        }
+    </script>
 </body>
 </html>
